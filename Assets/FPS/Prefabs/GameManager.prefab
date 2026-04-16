@@ -201,7 +201,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1315839542190839937}
   - component: {fileID: 1315839542190839936}
-  - component: {fileID: 1315839542190839938}
   - component: {fileID: 556685733}
   - component: {fileID: 3244674540524639750}
   - component: {fileID: 1065074375515001679}
@@ -251,18 +250,6 @@ MonoBehaviour:
   DelayBeforeWinMessage: 2
   VictorySound: {fileID: 8300000, guid: a533219934975884e81c1add37af9930, type: 3}
   LoseSceneName: LoseScene
---- !u!114 &1315839542190839938
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1315839542190839943}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 888c7d8f8f69c6b42a086589b6f01bb1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &556685733
 MonoBehaviour:
   m_ObjectHideFlags: 0
