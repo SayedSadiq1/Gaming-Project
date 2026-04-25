@@ -17,3 +17,17 @@ UserSettings/
 
 # Claude Code
 .claude/
+
+# Unity cache / generated
+.DS_Store
+Thumbs.db
+
+# Visual Studio / Rider
+.vscode/
+.idea/
+
+# New Unity solution format (you have it)
+*.slnx
+
+# Addressables / cache
+ServerData/
