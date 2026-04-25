@@ -157,7 +157,7 @@ MonoBehaviour:
   WeaponRoot: {fileID: 2001}
   WeaponMuzzle: {fileID: 3002}
   ShootType: 0
-  ProjectilePrefab: {fileID: 8924682559891268397, guid: 1183a5ed9801f644b9cb275e0fdaaf63,
+  ProjectilePrefab: {fileID: 8924682559891268397, guid: c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8,
     type: 3}
   DelayBetweenShots: 1.2
   BulletSpreadAngle: 0
@@ -318,7 +318,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3001}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0, y: 0.0174, z: -0.6154}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
