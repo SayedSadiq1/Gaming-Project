@@ -44,6 +44,7 @@ namespace Unity.FPS.Game
 
         public void TakeDamage(float damage, GameObject damageSource)
         {
+            Debug.Log($"{gameObject.name} HP = {CurrentHealth}");
             if (Invincible)
                 return;
 

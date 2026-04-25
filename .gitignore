@@ -7,5 +7,13 @@
 [Mm]emoryCaptures/
 UserSettings/
 
+# Unity auto-generated IDE files (do not commit)
+*.csproj
+*.sln
+*.suo
+*.user
+*.pidb
+*.userprefs
+
 # Claude Code
 .claude/
