@@ -559,7 +559,7 @@ MonoBehaviour:
   BulletsPerShot: 1
   RecoilForce: 1.3
   AimZoomRatio: 0.6
-  AimOffset: {x: 0.23, y: 0.4, z: 0.61}
+  AimOffset: {x: 0.1, y: 0.2, z: 0.5}
   AutomaticReload: 0
   HasPhysicalBullets: 0
   ClipSize: 30
