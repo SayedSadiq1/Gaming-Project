@@ -1,0 +1,12 @@
+{
+    "asset": "eb7361b0ce49b794e825ad6d1f99b47f",
+    "fileName": "019df958-400f-7100-b824-6f625a1250cb_Preview.jpg",
+    "prompt": "Industrial sci-fi ceiling panel, recessed lighting, metallic vents, tileable.",
+    "negativePrompt": "",
+    "model": "realistic-textures-3-0",
+    "modelName": "Realistic Textures 3.0",
+    "customSeed": 545849278,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation"
+}

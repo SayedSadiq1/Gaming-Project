@@ -1,0 +1,15 @@
+{
+    "asset": "a05f70fc06261bd44b76cec8b66b50b0",
+    "fileName": "019df961-bc1c-7612-b47b-88e0ee76967f.wav",
+    "prompt": "AK74 assault rifle reload sound, magazine click, bolt pull, mechanical.",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 10.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

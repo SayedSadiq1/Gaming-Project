@@ -1,0 +1,15 @@
+{
+    "asset": "7377f43747f76c942968481368121a56",
+    "fileName": "019e0242-31db-7f9a-825c-7fa47254a71f.wav",
+    "prompt": "mechanical gun reload sound for an AK-74 rifle, metallic clicks, magazine insert, bolt pull, realistic, 2.5 seconds long",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 2.5,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

@@ -1,0 +1,15 @@
+{
+    "asset": "32c603db0686557429d0ea1c16b3b218",
+    "fileName": "019e0242-2a9a-71dc-ab51-c48efdf9c410.wav",
+    "prompt": "heavy sniper rifle reload sound for an M107, heavy metallic clanks, large magazine lock, bolt slide, realistic, 5 seconds long",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 5.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

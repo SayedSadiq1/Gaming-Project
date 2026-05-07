@@ -1,0 +1,28 @@
+{
+    "asset": "9b115ffc059dfa247b241d0f7b03185c",
+    "fileName": "019df954-0cb9-7206-befd-8166771a6b9d.png",
+    "prompt": "Concept art for a heavy industrial sci-fi laboratory sliding door. Front view, closed, metallic with hazard stripes. High detail, 4k. Background must be plain white for easy removal.",
+    "negativePrompt": "",
+    "model": "gpt-image-1",
+    "modelName": "GPT Image 1",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0
+}

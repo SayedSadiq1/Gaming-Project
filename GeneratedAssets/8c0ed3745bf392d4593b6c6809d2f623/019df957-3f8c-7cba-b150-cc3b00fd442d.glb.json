@@ -1,0 +1,23 @@
+{
+    "asset": "8c0ed3745bf392d4593b6c6809d2f623",
+    "fileName": "019df957-3f8c-7cba-b150-cc3b00fd442d.glb",
+    "prompt": "3D mesh of a heavy industrial sci-fi laboratory sliding door. High quality, optimized for Unity.",
+    "negativePrompt": "",
+    "model": "model3d-tripo-p1",
+    "modelName": "Tripo P1",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "promptImageReferenceGuid": "9b115ffc059dfa247b241d0f7b03185c",
+    "modelReferenceGuid": "",
+    "multiviewFrontGuid": "",
+    "multiviewBackGuid": "",
+    "multiviewLeftGuid": "",
+    "multiviewRightGuid": "",
+    "multiviewTopGuid": "",
+    "multiviewBottomGuid": "",
+    "multiviewLeftFrontGuid": "",
+    "multiviewRightFrontGuid": "",
+    "faceLimit": -1
+}

@@ -1,0 +1,12 @@
+{
+    "asset": "f190a65aaaed477439d6b0a3a52e94bd",
+    "fileName": "019df958-4523-7b10-ab29-12c98b67927f_Preview.jpg",
+    "prompt": "Sci-fi laboratory floor, metallic diamond plate, hazard stripes on edges, oily surface, tileable.",
+    "negativePrompt": "",
+    "model": "realistic-textures-3-0",
+    "modelName": "Realistic Textures 3.0",
+    "customSeed": 99985421,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation"
+}

@@ -1,0 +1,15 @@
+{
+    "asset": "95ba2273fb26f7f41962d9378fd42e74",
+    "fileName": "019df962-07b1-7ee2-bb31-9149c07bce21.wav",
+    "prompt": "Shotgun reload sound, shells being loaded into tube, pump action click-clack.",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 10.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

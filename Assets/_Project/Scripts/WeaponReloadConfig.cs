@@ -11,5 +11,8 @@ namespace FacilityBreach
     {
         [Tooltip("How long this weapon takes to reload (seconds)")]
         public float ReloadTime = 2.5f;
+
+        [Tooltip("Sound played when this weapon reloads")]
+        public AudioClip ReloadSfx;
     }
 }

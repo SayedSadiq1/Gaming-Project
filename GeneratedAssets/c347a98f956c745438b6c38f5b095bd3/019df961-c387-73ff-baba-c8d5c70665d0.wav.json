@@ -1,0 +1,15 @@
+{
+    "asset": "c347a98f956c745438b6c38f5b095bd3",
+    "fileName": "019df961-c387-73ff-baba-c8d5c70665d0.wav",
+    "prompt": "Realistic AK74 assault rifle single shot sound, powerful, mechanical, metallic.",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 10.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

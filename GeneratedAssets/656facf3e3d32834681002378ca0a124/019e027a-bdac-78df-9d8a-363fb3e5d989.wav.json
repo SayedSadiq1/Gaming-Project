@@ -1,0 +1,15 @@
+{
+    "asset": "656facf3e3d32834681002378ca0a124",
+    "fileName": "019e027a-bdac-78df-9d8a-363fb3e5d989.wav",
+    "prompt": "sharp knife slash sound, swosh effect, melee attack, quick air cut",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 1.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

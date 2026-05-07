@@ -1,0 +1,12 @@
+{
+    "asset": "89aa46d8b572d3540a07f7303e0bebcc",
+    "fileName": "019df958-3d12-73cb-94bf-8a5625cb087c_Preview.jpg",
+    "prompt": "Heavy industrial sci-fi laboratory wall panel, dark grey metallic, blue emissive light strips, scratched metal, bolts and rivets, tileable.",
+    "negativePrompt": "",
+    "model": "realistic-textures-3-0",
+    "modelName": "Realistic Textures 3.0",
+    "customSeed": 1366989192,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation"
+}

@@ -1,0 +1,15 @@
+{
+    "asset": "aad1b5707024d044a8a1e60f1974f953",
+    "fileName": "019df961-b2a6-74cb-be95-693f15b51e63.wav",
+    "prompt": "Heavy sniper rifle reload sound, massive magazine slap, heavy bolt action.",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 10.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

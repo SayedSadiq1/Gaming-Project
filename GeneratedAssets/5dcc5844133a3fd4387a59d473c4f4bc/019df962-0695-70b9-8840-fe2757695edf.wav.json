@@ -1,0 +1,15 @@
+{
+    "asset": "5dcc5844133a3fd4387a59d473c4f4bc",
+    "fileName": "019df962-0695-70b9-8840-fe2757695edf.wav",
+    "prompt": "Pistol reload sound, magazine eject and insert, slide release click.",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 10.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

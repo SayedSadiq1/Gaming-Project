@@ -44,14 +44,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: de99b30e1e73fd14e98cc5371da25d12, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   Radius: 0.03
   Root: {fileID: 1100001}
   Tip: {fileID: 1300001}
   MaxLifeTime: 5
-  ImpactVfx: {fileID: 7655095426451682942, guid: a7d68b1a502e02a49b8efb1b86a8c931, type: 3}
-  ImpactVfxLifetime: 5
+  ImpactVfx: {fileID: 7655095426451682942, guid: f90f08d641768b44aaa592a0e604608c,
+    type: 3}
+  ImpactVfxLifetime: 2
   ImpactVfxSpawnOffset: 0.1
   ImpactSfxClip: {fileID: 0}
   HittableLayers:
@@ -130,7 +131,7 @@ MeshRenderer:
   m_RenderingLayerMask: 4294967295
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: ab10bul1e7c2ace1aaaa000000000001, type: 2}
+  - {fileID: 2100000, guid: 556f25e3a7659e14c81ea93a312831f8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

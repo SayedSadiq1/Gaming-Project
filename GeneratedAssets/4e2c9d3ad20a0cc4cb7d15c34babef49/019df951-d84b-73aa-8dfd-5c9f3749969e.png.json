@@ -1,0 +1,28 @@
+{
+    "asset": "4e2c9d3ad20a0cc4cb7d15c34babef49",
+    "fileName": "019df951-d84b-73aa-8dfd-5c9f3749969e.png",
+    "prompt": "Concept art for a modular industrial sci-fi laboratory wall section. Front view, flat lighting, clean paneling with exposed pipes and blue emissive lights. High detail, 4k.",
+    "negativePrompt": "",
+    "model": "gpt-image-1",
+    "modelName": "GPT Image 1",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0
+}

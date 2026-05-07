@@ -1,0 +1,15 @@
+{
+    "asset": "535727a5d60e3f847b7f81fbb2766356",
+    "fileName": "019df962-0c7b-772d-8d50-5e8fe64812f6.wav",
+    "prompt": "Sci-fi blaster recharge and reload sound, energy hum, electronic click.",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 10.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

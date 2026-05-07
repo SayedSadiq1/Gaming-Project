@@ -1,0 +1,15 @@
+{
+    "asset": "a901b0e831fcf0244bea99b269daf02a",
+    "fileName": "019df961-9e07-7522-8904-aefc2e5e15d9.wav",
+    "prompt": "Heavy sniper rifle shot sound, M107, extremely loud, echoing, powerful blast.",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 10.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

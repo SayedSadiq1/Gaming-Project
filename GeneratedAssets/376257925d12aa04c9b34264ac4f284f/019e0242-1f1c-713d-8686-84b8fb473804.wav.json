@@ -1,0 +1,15 @@
+{
+    "asset": "376257925d12aa04c9b34264ac4f284f",
+    "fileName": "019e0242-1f1c-713d-8686-84b8fb473804.wav",
+    "prompt": "pistol reload sound for an M1911, magazine release and insert, slide release, realistic, quick, 1.5 seconds long",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 1.5,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

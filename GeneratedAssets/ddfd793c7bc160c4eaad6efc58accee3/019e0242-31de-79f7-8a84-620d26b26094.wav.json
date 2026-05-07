@@ -1,0 +1,15 @@
+{
+    "asset": "ddfd793c7bc160c4eaad6efc58accee3",
+    "fileName": "019e0242-31de-79f7-8a84-620d26b26094.wav",
+    "prompt": "shotgun reload sound for a Benelli M4, shell loading, pumping action, realistic, 4 seconds long",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 4.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

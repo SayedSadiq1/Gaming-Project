@@ -422,7 +422,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8343701633494940853}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0.069, z: -0.085}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
@@ -439,11 +439,12 @@ AudioSource:
   m_GameObject: {fileID: 8343701633494940853}
   m_Enabled: 1
   serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
+  OutputAudioMixerGroup: {fileID: 243115921504442520, guid: fcc71635aab95ff4fbdf1880bf2afa2f,
+    type: 2}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 1
-  m_Volume: 1
+  m_Volume: 0.5
   m_Pitch: 1
   Loop: 0
   Mute: 0
@@ -575,10 +576,10 @@ MonoBehaviour:
   AmmoUsedOnStartCharge: 1
   AmmoUsageRateWhileCharging: 1
   WeaponAnimator: {fileID: 0}
-  MuzzleFlashPrefab: {fileID: 748781637555137343, guid: 3f5b545b9a1e74c418b061bba5bb9e2c,
+  MuzzleFlashPrefab: {fileID: 748781637555137343, guid: 231d5904bcc00cf4ca388ed66ff00936,
     type: 3}
   UnparentMuzzleFlash: 0
-  ShootSfx: {fileID: 0}
+  ShootSfx: {fileID: 8300000, guid: c347a98f956c745438b6c38f5b095bd3, type: 3}
   ChangeWeaponSfx: {fileID: 0}
   UseContinuousShootSound: 0
   ContinuousShootStartSfx: {fileID: 0}
@@ -593,7 +594,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 8343701633494940853}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7, type: 3}
+  m_Script: {fileID: 11500000, guid: 35823619334c4e4280f78ea50d88c9e9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FacilityBreach.WeaponReloadConfig
   ReloadTime: 2.5
+  ReloadSfx: {fileID: 8300000, guid: 7377f43747f76c942968481368121a56, type: 3}

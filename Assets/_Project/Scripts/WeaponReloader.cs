@@ -13,10 +13,6 @@ namespace FacilityBreach
     ///
     /// Press R → a golden ring fills over the reload time at screen centre → clip refills.
     /// Each weapon can have a WeaponReloadConfig component to set its own reload speed.
-    ///
-    /// SETUP:
-    ///   1. Add this component to the Player in the Ammar-test scene.
-    ///   2. Done. DefaultReloadTime and ReloadKey can be tweaked in the Inspector.
     /// </summary>
     public class WeaponReloader : MonoBehaviour
     {
@@ -24,7 +20,7 @@ namespace FacilityBreach
         [Tooltip("Reload time used when the weapon has no WeaponReloadConfig component")]
         public float DefaultReloadTime = 2.5f;
 
-        [Tooltip("Key the player presses to reload (new Input System key name)")]
+        [Tooltip("Key the player presses to reload")]
         public Key ReloadKey = Key.R;
 
         // ── runtime ──────────────────────────────────────────────────────────
@@ -41,7 +37,7 @@ namespace FacilityBreach
         {
             m_WeaponsManager = GetComponent<PlayerWeaponsManager>();
             BuildReloadUI();
-            m_Canvas.SetActive(false);
+            if (m_Canvas != null) m_Canvas.SetActive(false);
         }
 
         void Update()
@@ -53,8 +49,14 @@ namespace FacilityBreach
             WeaponController weapon = m_WeaponsManager?.GetActiveWeapon();
             if (weapon == null) return;
 
-            // Do not reload if already full
-            if (weapon.GetCurrentAmmo() >= Mathf.FloorToInt(weapon.MaxAmmo)) return;
+            // FIX: Prevent reloading if the magazine is already full
+            int currentAmmo = weapon.GetCurrentAmmo();
+            int maxAmmo = Mathf.RoundToInt(weapon.MaxAmmo);
+            
+            if (currentAmmo >= maxAmmo) 
+            {
+                return;
+            }
 
             StartCoroutine(DoReload(weapon));
         }
@@ -65,32 +67,64 @@ namespace FacilityBreach
 
             // Choose reload time – per-weapon config takes priority
             float duration = DefaultReloadTime;
+            AudioClip reloadSfx = null;
+
             WeaponReloadConfig cfg = weapon.GetComponentInChildren<WeaponReloadConfig>();
-            if (cfg != null) duration = cfg.ReloadTime;
+            if (cfg != null)
+            {
+                duration = cfg.ReloadTime;
+                reloadSfx = cfg.ReloadSfx;
+            }
+
+            // FIX: Play sound only when a valid reload starts
+            if (reloadSfx != null)
+            {
+                AudioSource audioSource = weapon.GetComponent<AudioSource>();
+                if (audioSource != null)
+                {
+                    audioSource.PlayOneShot(reloadSfx);
+                }
+            }
 
             // Show UI, reset ring
-            m_Ring.fillAmount = 0f;
-            m_Canvas.SetActive(true);
+            if (m_Ring != null) m_Ring.fillAmount = 0f;
+            if (m_Canvas != null) m_Canvas.SetActive(true);
 
             // Animate the ring over the reload duration
             float elapsed = 0f;
             while (elapsed < duration)
             {
+                // Safety: check if weapon was switched during reload
+                if (m_WeaponsManager != null && m_WeaponsManager.GetActiveWeapon() != weapon)
+                {
+                    break;
+                }
+
                 elapsed += Time.deltaTime;
-                m_Ring.fillAmount = Mathf.Clamp01(elapsed / duration);
+                if (m_Ring != null) m_Ring.fillAmount = Mathf.Clamp01(elapsed / duration);
                 yield return null;
             }
 
-            // Refill clip: UseAmmo with a negative value adds ammo (clamped to MaxAmmo internally)
-            weapon.UseAmmo(-weapon.MaxAmmo);
+            // Refill clip if we reached the end of the duration
+            if (elapsed >= duration)
+            {
+                // Refill to max
+                int ammoNeeded = Mathf.RoundToInt(weapon.MaxAmmo) - weapon.GetCurrentAmmo();
+                if (ammoNeeded > 0)
+                {
+                    weapon.UseAmmo(-ammoNeeded);
+                }
+            }
 
-            m_Canvas.SetActive(false);
+            if (m_Canvas != null) m_Canvas.SetActive(false);
             m_IsReloading = false;
         }
 
         // ── Build a lightweight screen-centre overlay entirely in code ────────
         void BuildReloadUI()
         {
+            if (m_Canvas != null) return;
+
             // Canvas
             m_Canvas = new GameObject("ReloadOverlay");
             m_Canvas.transform.SetParent(transform, false);
@@ -104,15 +138,14 @@ namespace FacilityBreach
             scaler.referenceResolution = new Vector2(1920, 1080);
             m_Canvas.AddComponent<GraphicRaycaster>();
 
-            // ── White ring (radial fill) — sprite drawn in code ──────────────
-            // Ring: 128×128 texture, ring band from radius 44 to 60 (16 px thick)
+            // ── White ring (radial fill) ──────────────
             Sprite ringSprite = CreateRingSprite(128, 44, 60);
 
             GameObject ring = new GameObject("Ring");
             ring.transform.SetParent(m_Canvas.transform, false);
             m_Ring             = ring.AddComponent<Image>();
             m_Ring.sprite      = ringSprite;
-            m_Ring.color       = Color.white;
+            m_Ring.color       = new Color(1f, 0.84f, 0f); // Golden yellow
             m_Ring.type        = Image.Type.Filled;
             m_Ring.fillMethod  = Image.FillMethod.Radial360;
             m_Ring.fillClockwise = true;
@@ -126,17 +159,13 @@ namespace FacilityBreach
             labelGO.transform.SetParent(m_Canvas.transform, false);
             m_Label             = labelGO.AddComponent<TextMeshProUGUI>();
             m_Label.text        = "RELOADING";
-            m_Label.fontSize    = 16f;
+            m_Label.fontSize    = 18f;
             m_Label.fontStyle   = FontStyles.Bold;
             m_Label.alignment   = TextAlignmentOptions.Center;
             m_Label.color       = Color.white;
-            SetAnchored(labelGO, new Vector2(0f, -72f), 160f, 26f);
+            SetAnchored(labelGO, new Vector2(0f, -80f), 200f, 30f);
         }
 
-        /// <summary>
-        /// Creates a donut/ring sprite at runtime — no external texture file needed.
-        /// Pixels between innerRadius and outerRadius from the centre are white; rest transparent.
-        /// </summary>
         static Sprite CreateRingSprite(int size, int innerRadius, int outerRadius)
         {
             Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
@@ -169,7 +198,6 @@ namespace FacilityBreach
             return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
         }
 
-        // Helper: anchor a RectTransform to screen centre with a fixed size
         static void SetAnchored(GameObject go, Vector2 offset, float w, float h)
         {
             RectTransform rt = go.GetComponent<RectTransform>();

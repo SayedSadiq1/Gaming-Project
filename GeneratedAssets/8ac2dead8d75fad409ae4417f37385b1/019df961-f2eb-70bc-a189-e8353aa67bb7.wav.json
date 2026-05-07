@@ -1,0 +1,15 @@
+{
+    "asset": "8ac2dead8d75fad409ae4417f37385b1",
+    "fileName": "019df961-f2eb-70bc-a189-e8353aa67bb7.wav",
+    "prompt": "Semi-auto pistol shot sound, M1911, crisp, metallic, sharp.",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 10.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}
