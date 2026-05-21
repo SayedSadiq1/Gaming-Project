@@ -1,0 +1,28 @@
+{
+    "asset": "2e6bc14647a60094eb38624e14f2d172",
+    "fileName": "019e2682-1e56-775c-8b16-99e38a406ad0.png",
+    "prompt": "A sleek, sci-fi blue keycard with glowing light blue accents, metallic finish, thin rectangular shape, modern futuristic design, high detail, isolated on white background, top down view. 1024x1024.",
+    "negativePrompt": "",
+    "model": "flux-2-dev",
+    "modelName": "Flux 2 (Dev)",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelatePixelGridSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0,
+    "dimensions": {
+        "width": 1024,
+        "height": 1024
+    },
+    "spriteSheet": false,
+    "duration": 0.0
+}

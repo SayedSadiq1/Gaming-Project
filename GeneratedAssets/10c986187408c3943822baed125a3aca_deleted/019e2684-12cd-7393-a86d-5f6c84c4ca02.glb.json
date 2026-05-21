@@ -1,0 +1,23 @@
+{
+    "asset": "10c986187408c3943822baed125a3aca",
+    "fileName": "019e2684-12cd-7393-a86d-5f6c84c4ca02.glb",
+    "prompt": "A 3D model of a sleek, sci-fi blue keycard with glowing light blue accents, metallic finish, thin rectangular shape, modern futuristic design, high detail.",
+    "negativePrompt": "",
+    "model": "model3d-tripo-p1",
+    "modelName": "Tripo P1",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "promptImageReferenceGuid": "8b7ad855b9c14cf4da45040c07d493d7",
+    "modelReferenceGuid": "",
+    "multiviewFrontGuid": "",
+    "multiviewBackGuid": "",
+    "multiviewLeftGuid": "",
+    "multiviewRightGuid": "",
+    "multiviewTopGuid": "",
+    "multiviewBottomGuid": "",
+    "multiviewLeftFrontGuid": "",
+    "multiviewRightFrontGuid": "",
+    "faceLimit": -1
+}

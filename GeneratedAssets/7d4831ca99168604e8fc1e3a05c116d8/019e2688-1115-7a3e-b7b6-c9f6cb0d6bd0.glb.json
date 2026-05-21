@@ -1,0 +1,23 @@
+{
+    "asset": "7d4831ca99168604e8fc1e3a05c116d8",
+    "fileName": "019e2688-1115-7a3e-b7b6-c9f6cb0d6bd0.glb",
+    "prompt": "A high-quality 3D mesh of a sleek, sci-fi blue keycard, thin rectangular shape, metallic texture, glowing accents, matching the provided reference image exactly. Low poly but detailed.",
+    "negativePrompt": "",
+    "model": "model3d-tripo-p1",
+    "modelName": "Tripo P1",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "refinementMode": "Generation",
+    "promptImageReferenceGuid": "2e6bc14647a60094eb38624e14f2d172",
+    "modelReferenceGuid": "",
+    "multiviewFrontGuid": "",
+    "multiviewBackGuid": "",
+    "multiviewLeftGuid": "",
+    "multiviewRightGuid": "",
+    "multiviewTopGuid": "",
+    "multiviewBottomGuid": "",
+    "multiviewLeftFrontGuid": "",
+    "multiviewRightFrontGuid": "",
+    "faceLimit": -1
+}

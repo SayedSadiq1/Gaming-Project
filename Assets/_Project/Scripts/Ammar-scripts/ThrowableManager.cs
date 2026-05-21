@@ -11,13 +11,24 @@ public class ThrowableManager : MonoBehaviour
 
     [Header("Prefabs")]
     public List<GameObject> ThrowablePrefabs;
-    
+
+    [Header("HUD Hook (optional)")]
+    [Tooltip("Starting frag count synced with the HUD. Set 0 to disable HUD hook.")]
+    public int startingFrags = 3;
+
     private int m_CurrentIndex = 0;
     private int m_FrameCount = 0;
+    private CombatHUD m_HUD;
 
     void Start()
     {
         Debug.Log("ThrowableManager Started on " + gameObject.name + ". Press " + ThrowKey + " to throw, " + CycleKey + " to cycle.");
+        m_HUD = Object.FindFirstObjectByType<CombatHUD>();
+        if (m_HUD != null && startingFrags > 0)
+        {
+            m_HUD.SetFragCount(startingFrags);
+            Debug.Log("[ThrowableManager] Frag counter initialised to " + startingFrags);
+        }
     }
 
     void Update()
@@ -50,10 +61,25 @@ public class ThrowableManager : MonoBehaviour
             Debug.LogWarning("No throwables assigned in ThrowablePrefabs list!");
             return;
         }
-        
+
         if (ThrowablePrefabs[m_CurrentIndex] == null)
         {
             Debug.LogWarning("Throwable at index " + m_CurrentIndex + " is null!");
+            return;
+        }
+
+        // Check if this throwable is a frag (HUD only tracks frag counter)
+        var prefab = ThrowablePrefabs[m_CurrentIndex];
+        bool isFrag = prefab.GetComponent<FragGrenade>() != null
+                   || prefab.name.IndexOf("frag", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+        // Lazy HUD lookup in case it spawned after Start
+        if (m_HUD == null) m_HUD = Object.FindFirstObjectByType<CombatHUD>();
+
+        // Block frag throw if HUD says we're out
+        if (isFrag && m_HUD != null && m_HUD.GetFragCount() <= 0)
+        {
+            Debug.Log("[ThrowableManager] Out of frag grenades.");
             return;
         }
 
@@ -65,12 +91,19 @@ public class ThrowableManager : MonoBehaviour
             else ThrowPoint = transform;
         }
 
-        GameObject throwableObj = Instantiate(ThrowablePrefabs[m_CurrentIndex], ThrowPoint.position, ThrowPoint.rotation);
+        GameObject throwableObj = Instantiate(prefab, ThrowPoint.position, ThrowPoint.rotation);
         ThrowableBase throwable = throwableObj.GetComponent<ThrowableBase>();
         if (throwable != null)
         {
             throwable.Throw(ThrowPoint.forward);
             Debug.Log("Success! Thrown: " + throwableObj.name);
+
+            // Decrement HUD counter ONLY for frags
+            if (isFrag && m_HUD != null)
+            {
+                m_HUD.AddFrag(-1);
+                Debug.Log("[ThrowableManager] Frag count now: " + m_HUD.GetFragCount());
+            }
         }
         else
         {
