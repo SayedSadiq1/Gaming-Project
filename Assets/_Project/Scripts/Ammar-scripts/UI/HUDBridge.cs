@@ -48,17 +48,59 @@ public class HUDBridge : MonoBehaviour
     void TryBindPlayer()
     {
         if (_player != null) return;
-        var p = GameObject.FindGameObjectWithTag("Player");
+
+        GameObject p = null;
+
+        // 1) Try the "Player" tag
+        try { p = GameObject.FindGameObjectWithTag("Player"); } catch { }
+
+        // 2) Fall back to any GameObject with PlayerWeaponsManager
+        if (p == null)
+        {
+            var pwm = FindFirstByTypeName("PlayerWeaponsManager");
+            if (pwm != null) p = pwm.gameObject;
+        }
+
+        // 3) Last resort: any GameObject with both Health and a CharacterController
+        //    (matches the FPS Microgame's Player setup, even without the tag)
+        if (p == null)
+        {
+            foreach (var c in FindAllByTypeName("Health"))
+            {
+                if (c.GetComponent<CharacterController>() != null) { p = c.gameObject; break; }
+            }
+        }
+
         if (p == null) return;
+
         _player = p.transform;
         _cc     = p.GetComponent<CharacterController>();
         TryBindHealth(p);
+        Debug.Log("[HUDBridge] Bound Player: " + p.name);
+    }
+
+    static Component FindFirstByTypeName(string typeName)
+    {
+        var all = Object.FindObjectsByType<Component>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var c in all)
+            if (c != null && c.GetType().Name == typeName) return c;
+        return null;
+    }
+
+    static System.Collections.Generic.List<Component> FindAllByTypeName(string typeName)
+    {
+        var list = new System.Collections.Generic.List<Component>();
+        var all = Object.FindObjectsByType<Component>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var c in all)
+            if (c != null && c.GetType().Name == typeName) list.Add(c);
+        return list;
     }
 
     void TryBindHealth(GameObject p)
     {
         if (_healthBound) return;
-        foreach (var c in p.GetComponents<Component>())
+        // Search the Player and ALL children for a Health component
+        foreach (var c in p.GetComponentsInChildren<Component>(true))
         {
             if (c == null) continue;
             var t = c.GetType();
@@ -74,9 +116,10 @@ public class HUDBridge : MonoBehaviour
                 _healthOnDamagedField.SetValue(_health, current + _onDamagedHandler);
             }
             _healthBound = true;
-            if (verboseLogs) Debug.Log("[HUDBridge] Health bound.");
+            Debug.Log("[HUDBridge] Bound Health on " + c.gameObject.name);
             return;
         }
+        Debug.LogWarning("[HUDBridge] No Health component found on " + p.name + " or its children.");
     }
 
     void Update()

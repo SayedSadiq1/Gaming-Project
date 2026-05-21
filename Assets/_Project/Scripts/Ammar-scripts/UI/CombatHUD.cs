@@ -77,6 +77,8 @@ public class CombatHUD : MonoBehaviour
     // ── GRENADES (frag only) ────────────────────────────────────────────────
     [Header("Frag Grenade Counter")]
     public TextMeshProUGUI fragCountText;
+    [Tooltip("The panel GameObject — gets auto-hidden when no grenade system is in the scene.")]
+    public GameObject fragCounterPanel;
 
     // ── INTERNAL STATE ──────────────────────────────────────────────────────
     float  _displayedHealth = 100f;
@@ -104,6 +106,35 @@ public class CombatHUD : MonoBehaviour
         if (healthHitFlashGroup)healthHitFlashGroup.alpha = 0f;
         if (damageVignette)     damageVignette.color = new Color(1, 0, 0, 0);
         if (nameplateGroup)     nameplateGroup.alpha = nameplateIdleAlpha;
+
+        // Hide frag counter if no Aegis GrenadeSystem exists in this scene
+        if (fragCounterPanel != null && !HasGrenadeSystemInScene())
+            fragCounterPanel.SetActive(false);
+
+        // Self-heal: make sure a HUDBridge exists somewhere in the scene
+        if (Object.FindFirstObjectByType<HUDBridge>() == null)
+        {
+            var bridgeGO = new GameObject("HUDBridge_Auto");
+            var bridge = bridgeGO.AddComponent<HUDBridge>();
+            bridge.hud = this;
+            Debug.Log("[CombatHUD] No HUDBridge found in scene — auto-created one.");
+        }
+    }
+
+    static bool HasGrenadeSystemInScene()
+    {
+        var all = Object.FindObjectsByType<Component>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var c in all)
+        {
+            if (c != null && c.GetType().Name == "GrenadeSystem") return true;
+        }
+        return false;
+    }
+
+    /// <summary>Manually toggle the frag counter panel (e.g. when picking up first grenade).</summary>
+    public void SetFragCounterVisible(bool visible)
+    {
+        if (fragCounterPanel != null) fragCounterPanel.SetActive(visible);
     }
 
     void Update()

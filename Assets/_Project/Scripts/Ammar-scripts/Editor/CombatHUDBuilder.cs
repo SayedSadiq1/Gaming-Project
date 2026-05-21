@@ -374,6 +374,7 @@ public static class CombatHUDBuilder
         var rt = holder.GetComponent<RectTransform>();
         rt.anchoredPosition = new Vector2(370, 30);
         rt.sizeDelta        = new Vector2(100, 80);
+        hud.fragCounterPanel = holder;   // so CombatHUD can hide it when no grenade system
 
         var bg = NewImage("BG", holder.transform, C_PANEL); Stretch(bg.rectTransform);
         var accent = NewImage("Accent", holder.transform, new Color(1f, 0.5f, 0.2f, 1f));
