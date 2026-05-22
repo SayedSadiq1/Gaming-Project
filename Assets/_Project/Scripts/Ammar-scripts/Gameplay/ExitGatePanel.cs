@@ -1,0 +1,195 @@
+using System.Collections;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Facility Breach — Exit Gate Panel (Level 3 → Level 4)
+//
+//  Acts like KeycardPanel but enforces three conditions before unlocking:
+//    1. All 3 servers hacked  (ServerHack.HackedCount >= requiredServers)
+//    2. All enemies dead      (no live Health component on a non-Player object)
+//    3. Player holds the matching keycard (blue)
+//
+//  Dynamic prompt shows which requirement is still missing.
+//  On success: slides the two doors apart, fades to black, prints
+//  "MISSION COMPLETE" then loads `nextSceneName` (or just holds the
+//  black screen if the name is empty / scene doesn't exist).
+// ─────────────────────────────────────────────────────────────────────────────
+public class ExitGatePanel : MonoBehaviour, IInteractable
+{
+    [Header("Conditions")]
+    public int           requiredServers  = 3;
+    public bool          requireAllEnemiesDead = true;
+    public bool          requiresKeycard  = true;
+    public KeycardColor  requiredColor    = KeycardColor.Blue;
+
+    [Header("Doors")]
+    public Transform leftDoor;
+    public Vector3   leftOpenOffset  = new Vector3(-2.75f, 0f, 0f);
+    public Transform rightDoor;
+    public Vector3   rightOpenOffset = new Vector3( 2.75f, 0f, 0f);
+    public float     slideDuration   = 1.5f;
+
+    [Header("Prompts")]
+    public string promptReady          = "PRESS F TO EXIT FACILITY";
+    public string promptMissingServers = "HACK ALL SERVERS FIRST ({0}/{1})";
+    public string promptEnemiesAlive   = "ELIMINATE ALL HOSTILES ({0} REMAINING)";
+    public string promptNoKeycard      = "REQUIRES BLUE KEYCARD";
+
+    [Header("Cutscene")]
+    public string nextSceneName        = "Level4";
+    public float  fadeInDelay          = 0.6f;
+    public float  fadeDuration         = 1.8f;
+    public float  holdBlackBeforeLoad  = 1.5f;
+    public string completeText         = "MISSION COMPLETE";
+    public string completeSubText      = "To be continued...";
+
+    [Header("Audio")]
+    public AudioClip openSound;
+    public AudioClip lockedSound;
+
+    public string PromptText  { get; private set; } = "LOCKED";
+    public float  HoldDuration => 0f;   // press-once
+
+    Vector3 _leftClosedLocal, _rightClosedLocal;
+    bool _captured, _opening, _opened, _cutsceneStarted;
+
+    void Awake() { CaptureClosed(); }
+    void Start() { CaptureClosed(); }
+
+    void CaptureClosed()
+    {
+        if (_captured) return;
+        if (leftDoor  != null) _leftClosedLocal  = leftDoor.localPosition;
+        if (rightDoor != null) _rightClosedLocal = rightDoor.localPosition;
+        _captured = true;
+    }
+
+    int CountLiveEnemies()
+    {
+        // Use reflection so we don't need an asmdef reference to Unity.FPS.Game.
+        var healthType = System.Type.GetType("Unity.FPS.Game.Health, Unity.FPS.Game");
+        if (healthType == null) return 0;
+
+        int live = 0;
+        var all = Object.FindObjectsByType(healthType, FindObjectsSortMode.None);
+        foreach (var obj in all)
+        {
+            var comp = obj as Component;
+            if (comp == null) continue;
+            if (comp.CompareTag("Player")) continue;
+            // CurrentHealth public field on Unity FPS Health
+            float hp = 0f;
+            try
+            {
+                var f = healthType.GetField("CurrentHealth");
+                if (f != null) hp = (float)f.GetValue(comp);
+            }
+            catch { }
+            if (hp > 0.01f) live++;
+        }
+        return live;
+    }
+
+    public bool CanInteract(GameObject interactor, out string reason)
+    {
+        if (_opened || _opening) { reason = "Already open"; return false; }
+
+        // Condition 1 — servers
+        int hacked = ServerHack.HackedCount;
+        if (hacked < requiredServers)
+        {
+            PromptText = string.Format(promptMissingServers, hacked, requiredServers);
+            reason = PromptText;
+            return false;
+        }
+
+        // Condition 2 — enemies
+        if (requireAllEnemiesDead)
+        {
+            int alive = CountLiveEnemies();
+            if (alive > 0)
+            {
+                PromptText = string.Format(promptEnemiesAlive, alive);
+                reason = PromptText;
+                return false;
+            }
+        }
+
+        // Condition 3 — keycard
+        if (requiresKeycard)
+        {
+            var inv = interactor.GetComponent<KeycardInventory>();
+            if (inv == null) inv = interactor.GetComponentInParent<KeycardInventory>();
+            if (inv == null || !inv.HasKeycard(requiredColor))
+            {
+                PromptText = promptNoKeycard;
+                reason = PromptText;
+                return false;
+            }
+        }
+
+        PromptText = promptReady;
+        reason = "";
+        return true;
+    }
+
+    public void OnInteract(GameObject interactor)
+    {
+        if (_opened || _opening) return;
+        _opening = true;
+        if (openSound != null) AudioSource.PlayClipAtPoint(openSound, transform.position);
+        StartCoroutine(SlideRoutine());
+    }
+
+    IEnumerator SlideRoutine()
+    {
+        CaptureClosed();
+        Vector3 lTarget = _leftClosedLocal  + leftOpenOffset;
+        Vector3 rTarget = _rightClosedLocal + rightOpenOffset;
+
+        float t = 0f;
+        while (t < slideDuration)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.SmoothStep(0f, 1f, t / slideDuration);
+            if (leftDoor  != null) leftDoor.localPosition  = Vector3.Lerp(_leftClosedLocal,  lTarget, k);
+            if (rightDoor != null) rightDoor.localPosition = Vector3.Lerp(_rightClosedLocal, rTarget, k);
+            yield return null;
+        }
+        if (leftDoor  != null) leftDoor.localPosition  = lTarget;
+        if (rightDoor != null) rightDoor.localPosition = rTarget;
+        _opened = true;
+        _opening = false;
+
+        if (!_cutsceneStarted) StartCoroutine(CutsceneRoutine());
+    }
+
+    IEnumerator CutsceneRoutine()
+    {
+        _cutsceneStarted = true;
+        if (fadeInDelay > 0f) yield return new WaitForSeconds(fadeInDelay);
+
+        FadeToBlack.Play(fadeDuration, completeText, completeSubText);
+        yield return new WaitForSeconds(fadeDuration + holdBlackBeforeLoad);
+
+        // Try loading the next scene; if it doesn't exist, stay black.
+        if (!string.IsNullOrEmpty(nextSceneName))
+        {
+            try
+            {
+                if (Application.CanStreamedLevelBeLoaded(nextSceneName))
+                {
+                    SceneManager.LoadScene(nextSceneName);
+                    yield break;
+                }
+                Debug.LogWarning("[ExitGatePanel] Scene '" + nextSceneName + "' not in Build Settings — holding black screen.");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[ExitGatePanel] Couldn't load next scene: " + e.Message);
+            }
+        }
+        // Fallback: stay on the black "TO BE CONTINUED" screen.
+    }
+}

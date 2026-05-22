@@ -29,9 +29,17 @@ public class HideFPSHUD : MonoBehaviour
     }
     void StopRepeat() => CancelInvoke(nameof(Hide));
 
+    static readonly string[] componentsToDisable =
+    {
+        "InGameMenuManager", "PlayerHealthBar", "AmmoCounter", "WeaponHUDManager",
+        "Compass", "NotificationHUDManager", "ObjectiveHUDManager", "FramerateCounter",
+        "FeedbackFlashHUD", "DisplayMessageManager", "CrosshairManager", "StanceHUD",
+        "JetpackCounter"
+    };
+
     void Hide()
     {
-        // Disable any matching GameObject in the scene (Canvas or not)
+        // 1) Disable matching GameObjects by name
         var all = Object.FindObjectsByType<Transform>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         foreach (var t in all)
         {
@@ -49,6 +57,24 @@ public class HideFPSHUD : MonoBehaviour
                 if (string.Equals(n, target, System.StringComparison.OrdinalIgnoreCase))
                 {
                     t.gameObject.SetActive(false);
+                    break;
+                }
+            }
+        }
+
+        // 2) Disable specific FPS UI scripts directly — even if their GameObject
+        //    is named something we don't catch above. This stops InGameMenuManager
+        //    NullRefs from spamming the console.
+        var comps = Object.FindObjectsByType<Component>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var c in comps)
+        {
+            if (c == null) continue;
+            string typeName = c.GetType().Name;
+            foreach (var target in componentsToDisable)
+            {
+                if (typeName == target && c is Behaviour beh)
+                {
+                    beh.enabled = false;
                     break;
                 }
             }

@@ -35,18 +35,21 @@ public class MainMenuController : MonoBehaviour
         continueButton.interactable = has;
     }
 
-    public void OnPlay()         // NEW GAME (clears save)
+    public void OnPlay()         // NEW GAME — start fresh from the beginning
     {
-        SaveSystem.DeleteSave();
         if (string.IsNullOrEmpty(level1SceneName)) { Debug.LogError("[MainMenu] level1SceneName empty."); return; }
+        SaveSystem.DeleteSave();
+        SaveSystem.Save(level1SceneName, 100f, 30);     // placeholder so HasSave() returns true next session
+        SaveSystem.ContinueRequested = false;            // start at default spawn, not restore
         SceneManager.LoadScene(level1SceneName);
     }
 
-    public void OnContinue()     // CONTINUE — load saved scene
+    public void OnContinue()     // CONTINUE — load saved scene + restore player state
     {
         if (!SaveSystem.HasSave()) { Debug.LogWarning("[MainMenu] No save to continue."); return; }
         string scene = SaveSystem.GetSavedScene();
         if (string.IsNullOrEmpty(scene)) return;
+        SaveSystem.ContinueRequested = true;             // AutoSaveManager will restore position/HP on load
         SceneManager.LoadScene(scene);
     }
 

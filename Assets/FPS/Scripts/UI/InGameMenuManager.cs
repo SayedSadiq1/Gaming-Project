@@ -104,12 +104,15 @@ namespace Unity.FPS.UI
 
             }
 
-            if (m_NavigateAction.ReadValue<Vector2>().y != 0)
+            // ── PATCHED (Ammar): null-guard EventSystem.current so the FPS HUD
+            //    doesn't spam NullReferenceExceptions when the custom menu
+            //    EventSystem isn't present in this scene.
+            if (m_NavigateAction != null && m_NavigateAction.ReadValue<Vector2>().y != 0)
             {
-                if (EventSystem.current.currentSelectedGameObject == null)
+                if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject == null)
                 {
                     EventSystem.current.SetSelectedGameObject(null);
-                    LookSensitivitySlider.Select();
+                    if (LookSensitivitySlider != null) LookSensitivitySlider.Select();
                 }
             }
         }

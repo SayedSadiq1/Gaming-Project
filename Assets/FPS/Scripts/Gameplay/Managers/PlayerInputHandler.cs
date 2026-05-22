@@ -65,6 +65,79 @@ namespace Unity.FPS.Gameplay
             m_CrouchAction.Enable();
             m_ReloadAction.Enable();
             m_NextWeaponAction.Enable();
+
+            // ── PATCHED (Ammar): apply user-customised KeyBindings as binding overrides.
+            //    Reflection-based so we don't add an asmdef dependency from fps.Gameplay
+            //    to Assembly-CSharp.
+            ApplyAmmarKeyBindings();
+        }
+
+        void ApplyAmmarKeyBindings()
+        {
+            var kbType = System.Type.GetType("KeyBindings, Assembly-CSharp");
+            if (kbType == null) return;
+            var getMethod = kbType.GetMethod("Get", new[] { typeof(KeyCode).Assembly.GetType("System.String") ?? typeof(string) });
+            if (getMethod == null) getMethod = kbType.GetMethod("Get", new[] { typeof(string) });
+            if (getMethod == null) return;
+
+            OverrideAmmar(m_JumpAction,   "Jump",   getMethod);
+            OverrideAmmar(m_FireAction,   "Shoot",  getMethod);
+            OverrideAmmar(m_AimAction,    "Aim",    getMethod);
+            OverrideAmmar(m_SprintAction, "Sprint", getMethod);
+            OverrideAmmar(m_CrouchAction, "Crouch", getMethod);
+            OverrideAmmar(m_ReloadAction, "Reload", getMethod);
+        }
+
+        static void OverrideAmmar(InputAction action, string keyBindingAction, System.Reflection.MethodInfo getMethod)
+        {
+            if (action == null) return;
+            KeyCode kc;
+            try { kc = (KeyCode)getMethod.Invoke(null, new object[] { keyBindingAction }); }
+            catch { return; }
+            string path = KeyCodeToBindingPath(kc);
+            if (string.IsNullOrEmpty(path)) return;
+
+            // Override the first binding of this action (the keyboard/mouse one)
+            for (int i = 0; i < action.bindings.Count; i++)
+            {
+                var b = action.bindings[i];
+                if (b.isComposite || b.isPartOfComposite) continue;
+                action.ApplyBindingOverride(i, path);
+                Debug.Log($"[KeyBindings] Override '{keyBindingAction}' → {path}");
+                return;
+            }
+        }
+
+        static string KeyCodeToBindingPath(KeyCode k)
+        {
+            if (k >= KeyCode.A && k <= KeyCode.Z)
+                return "<Keyboard>/" + ((char)('a' + (k - KeyCode.A)));
+            if (k >= KeyCode.Alpha0 && k <= KeyCode.Alpha9)
+                return "<Keyboard>/" + ((char)('0' + (k - KeyCode.Alpha0)));
+            if (k >= KeyCode.F1 && k <= KeyCode.F12)
+                return "<Keyboard>/f" + (1 + (k - KeyCode.F1));
+            switch (k)
+            {
+                case KeyCode.Space:        return "<Keyboard>/space";
+                case KeyCode.LeftShift:    return "<Keyboard>/leftShift";
+                case KeyCode.RightShift:   return "<Keyboard>/rightShift";
+                case KeyCode.LeftControl:  return "<Keyboard>/leftCtrl";
+                case KeyCode.RightControl: return "<Keyboard>/rightCtrl";
+                case KeyCode.LeftAlt:      return "<Keyboard>/leftAlt";
+                case KeyCode.RightAlt:     return "<Keyboard>/rightAlt";
+                case KeyCode.Escape:       return "<Keyboard>/escape";
+                case KeyCode.Return:       return "<Keyboard>/enter";
+                case KeyCode.Tab:          return "<Keyboard>/tab";
+                case KeyCode.Backspace:    return "<Keyboard>/backspace";
+                case KeyCode.UpArrow:      return "<Keyboard>/upArrow";
+                case KeyCode.DownArrow:    return "<Keyboard>/downArrow";
+                case KeyCode.LeftArrow:    return "<Keyboard>/leftArrow";
+                case KeyCode.RightArrow:   return "<Keyboard>/rightArrow";
+                case KeyCode.Mouse0:       return "<Mouse>/leftButton";
+                case KeyCode.Mouse1:       return "<Mouse>/rightButton";
+                case KeyCode.Mouse2:       return "<Mouse>/middleButton";
+            }
+            return null;
         }
 
         void LateUpdate()

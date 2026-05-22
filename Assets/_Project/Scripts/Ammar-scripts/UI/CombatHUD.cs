@@ -3,16 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Facility Breach — Combat HUD  (Warzone style, fully self-contained)
-//
-//  Pure UI script — no FPS Microgame references. A separate HUDBridge script
-//  reads gameplay data (health, ammo, weapon) and calls the public setters
-//  below to push updates into the HUD.
-//
-//  Built by CombatHUDBuilder editor script — every field is exposed in the
-//  inspector so you can hand-tune positions, colors, fonts.
-// ─────────────────────────────────────────────────────────────────────────────
+
 public class CombatHUD : MonoBehaviour
 {
     [Header("Per-Weapon Configs")]

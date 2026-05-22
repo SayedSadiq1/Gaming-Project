@@ -292,11 +292,12 @@ public static class MainMenuBuilder
         // ── Bottom row: CONTROLS  |  RESET  |  BACK ──
         var btnControls = NewMenuButton(panel.transform, "CONTROLS");
         ConfigBottomBtn(btnControls.GetComponent<RectTransform>(), -160f, 30f, new Vector2(220, 60));
+        StyleAsBottomButton(btnControls);
         UnityEventTools.AddPersistentListener(btnControls.onClick, s_ctrl.OnControls);
 
         var btnReset = NewMenuButton(panel.transform, "RESET");
         ConfigBottomBtn(btnReset.GetComponent<RectTransform>(), 80f, 30f, new Vector2(160, 60));
-        // Tint the accent bar red to mark it as destructive
+        StyleAsBottomButton(btnReset);
         var fx = btnReset.GetComponent<ButtonHoverFX>();
         if (fx != null)
         {
@@ -307,9 +308,25 @@ public static class MainMenuBuilder
 
         var btnBack = NewMenuButton(panel.transform, "BACK");
         ConfigBottomBtn(btnBack.GetComponent<RectTransform>(), 260f, 30f, new Vector2(160, 60));
+        StyleAsBottomButton(btnBack);
         UnityEventTools.AddPersistentListener(btnBack.onClick, s_ctrl.OnBackToMain);
 
         return panel;
+    }
+
+    // Apply "bottom-row" styling: smaller font, centered, single line — fixes the
+    // "CONTROL S" / "RESE T" wrapping we saw.
+    static void StyleAsBottomButton(Button btn, int fontSize = 22)
+    {
+        var lbl = btn.GetComponentInChildren<TextMeshProUGUI>();
+        if (lbl == null) return;
+        lbl.fontSize         = fontSize;
+        lbl.alignment        = TextAlignmentOptions.Center;
+        lbl.enableWordWrapping = false;
+        lbl.characterSpacing = 4;
+        var rt = lbl.rectTransform;
+        rt.offsetMin = new Vector2(10, 0);
+        rt.offsetMax = new Vector2(-10, 0);
     }
 
     static void ConfigBottomBtn(RectTransform rt, float x, float y, Vector2 size)
@@ -364,10 +381,12 @@ public static class MainMenuBuilder
         // Bottom: BACK + RESET CONTROLS
         var btnBack = NewMenuButton(panel.transform, "BACK");
         ConfigBottomBtn(btnBack.GetComponent<RectTransform>(), -110f, 28f, new Vector2(200, 56));
+        StyleAsBottomButton(btnBack);
         UnityEventTools.AddPersistentListener(btnBack.onClick, s_ctrl.OnBackToSettings);
 
         var btnResetCtrl = NewMenuButton(panel.transform, "RESET CONTROLS");
         ConfigBottomBtn(btnResetCtrl.GetComponent<RectTransform>(), 130f, 28f, new Vector2(260, 56));
+        StyleAsBottomButton(btnResetCtrl, 20);
         var fx = btnResetCtrl.GetComponent<ButtonHoverFX>();
         if (fx != null)
         {

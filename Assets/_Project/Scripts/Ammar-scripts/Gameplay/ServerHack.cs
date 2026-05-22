@@ -36,13 +36,20 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
     public AudioClip hackSuccessSound;
     public AudioClip hackFailSound;
     public AudioClip alarmSound;
+    [Tooltip("Looping alarm that parents to the Player so the player can hear it anywhere.")]
+    public AudioClip alarmLoopSound;
     [Range(0f, 1f)] public float audioVolume = 1f;
+    [Range(0f, 1f)] public float alarmLoopVolume = 0.7f;
 
     [Header("Visual Feedback")]
     public Renderer indicatorRenderer;
     public Color    hackedColor = new Color(1f, 0.2f, 0.2f, 1f);
     public Light    indicatorLight;
     public GameObject hackVFX;
+    [Tooltip("Parent of all the server rack meshes for this room. Every renderer under it gets tinted red when hacked.")]
+    public Transform hackedServersGroup;
+    [Tooltip("Emission intensity multiplier when tinting the server group.")]
+    public float     hackedEmissionBoost = 2.0f;
 
     [Header("Optional Keycard Requirement")]
     public bool requiresKeycard = false;
@@ -56,6 +63,7 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
     bool   _wasHoldingSignificantly;
 
     bool _hacked;
+    AudioSource _alarmLoopSource;   // child of the Player while alarm is active
     static readonly HashSet<int> _hackedIds = new HashSet<int>();
 
     public static int  HackedCount => _hackedIds.Count;
@@ -197,6 +205,7 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
                 _wasHoldingSignificantly = false;
                 PlayClip(hackFailSound);
                 PlayClip(alarmSound);
+                StartAlarmLoop();
                 Debug.Log($"[ServerHack] Server {serverId} FIRST ATTEMPT FAILED. Lockout {lockoutDuration}s started.");
                 return;
             }
@@ -214,14 +223,18 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
 
         if (indicatorRenderer != null)
         {
-            var mat = indicatorRenderer.material;
-            if (mat.HasProperty("_BaseColor"))     mat.SetColor("_BaseColor", hackedColor);
-            if (mat.HasProperty("_Color"))         mat.SetColor("_Color",     hackedColor);
-            if (mat.HasProperty("_EmissionColor")) mat.SetColor("_EmissionColor", hackedColor * 1.5f);
+            TintRenderer(indicatorRenderer, hackedColor, 1.5f);
+        }
+        if (hackedServersGroup != null)
+        {
+            var rends = hackedServersGroup.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in rends) TintRenderer(r, hackedColor, hackedEmissionBoost);
+            Debug.Log($"[ServerHack] Tinted {rends.Length} renderers under '{hackedServersGroup.name}' red.");
         }
         if (indicatorLight != null) indicatorLight.color = hackedColor;
         if (hackVFX != null) Instantiate(hackVFX, transform.position, transform.rotation);
         PlayClip(hackSuccessSound);
+        StopAlarmLoop();
 
         var hud = Object.FindFirstObjectByType<CombatHUD>();
         if (hud != null) hud.IncrementObjective();
@@ -234,4 +247,68 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
         if (clip == null) return;
         AudioSource.PlayClipAtPoint(clip, transform.position, audioVolume);
     }
+
+    static void TintRenderer(Renderer r, Color color, float emissionBoost)
+    {
+        if (r == null) return;
+        // Use .materials so each renderer gets its own instance (no shared-mat leak).
+        var mats = r.materials;
+        for (int i = 0; i < mats.Length; i++)
+        {
+            var mat = mats[i];
+            if (mat == null) continue;
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color); // URP
+            if (mat.HasProperty("_Color"))     mat.SetColor("_Color",     color); // Standard
+            if (mat.HasProperty("_EmissionColor"))
+            {
+                mat.EnableKeyword("_EMISSION");
+                mat.SetColor("_EmissionColor", color * emissionBoost);
+            }
+        }
+        r.materials = mats;
+    }
+
+    // ── Looping alarm parented to the Player so it follows them anywhere ───
+    void StartAlarmLoop()
+    {
+        if (alarmLoopSound == null) return;
+        if (_alarmLoopSource != null) return;   // already playing
+
+        var player = GameObject.FindGameObjectWithTag("Player");
+        if (player == null)
+        {
+            Debug.LogWarning("[ServerHack] No Player tagged GameObject — alarm loop won't follow.");
+            // Fall back to a world-positioned loop at the server.
+            var hostGO = new GameObject("ServerAlarmLoop");
+            hostGO.transform.SetParent(transform, false);
+            _alarmLoopSource = hostGO.AddComponent<AudioSource>();
+        }
+        else
+        {
+            var hostGO = new GameObject("ServerAlarmLoop");
+            hostGO.transform.SetParent(player.transform, false);
+            hostGO.transform.localPosition = Vector3.zero;
+            _alarmLoopSource = hostGO.AddComponent<AudioSource>();
+            _alarmLoopSource.spatialBlend = 0f;   // 2D — heard anywhere in the level
+        }
+
+        _alarmLoopSource.clip   = alarmLoopSound;
+        _alarmLoopSource.loop   = true;
+        _alarmLoopSource.volume = alarmLoopVolume;
+        _alarmLoopSource.playOnAwake = false;
+        _alarmLoopSource.Play();
+        Debug.Log("[ServerHack] Alarm loop started on player.");
+    }
+
+    void StopAlarmLoop()
+    {
+        if (_alarmLoopSource == null) return;
+        _alarmLoopSource.Stop();
+        Destroy(_alarmLoopSource.gameObject);
+        _alarmLoopSource = null;
+        Debug.Log("[ServerHack] Alarm loop stopped.");
+    }
+
+    void OnDestroy() { StopAlarmLoop(); }
+    void OnDisable() { StopAlarmLoop(); }
 }

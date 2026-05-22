@@ -28,10 +28,53 @@ public static class Level3InteractionsBuilder
         AttachServerHacks();
         SetupBlueKeycardPrefab();
         SetupKeycardPanels();
+        SetupExitGate();
         BuildPromptUI();
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log("[Level3InteractionsBuilder] ✓ Setup complete. Play, look at a target, hold F.");
+    }
+
+    static void SetupExitGate()
+    {
+        var panel = GameObject.Find("Exit_panel");
+        if (panel == null) { Debug.LogWarning("[Level3InteractionsBuilder] Couldn't find 'Exit_panel'."); return; }
+
+        var leftDoor  = GameObject.Find("Exit_left");
+        var rightDoor = GameObject.Find("Exit_Right");
+        if (leftDoor == null || rightDoor == null)
+        {
+            Debug.LogWarning("[Level3InteractionsBuilder] Exit doors missing. " +
+                             $"left={leftDoor != null}, right={rightDoor != null}");
+        }
+
+        var gate = panel.GetComponent<ExitGatePanel>();
+        if (gate == null) gate = Undo.AddComponent<ExitGatePanel>(panel);
+
+        gate.requiredServers       = 3;
+        gate.requireAllEnemiesDead = true;
+        gate.requiresKeycard       = true;
+        gate.requiredColor         = KeycardColor.Blue;
+
+        gate.leftDoor        = leftDoor  != null ? leftDoor.transform  : null;
+        gate.rightDoor       = rightDoor != null ? rightDoor.transform : null;
+        // Closed 35.73994 → Open 32.98994 (delta -2.75), and 41.77994 → 44.52994 (delta +2.75)
+        gate.leftOpenOffset  = new Vector3(-2.75f, 0f, 0f);
+        gate.rightOpenOffset = new Vector3( 2.75f, 0f, 0f);
+        gate.slideDuration   = 1.5f;
+        gate.nextSceneName   = "Level4";
+
+        EditorUtility.SetDirty(gate);
+
+        if (panel.GetComponent<Collider>() == null)
+        {
+            var col = Undo.AddComponent<BoxCollider>(panel);
+            col.size = new Vector3(1.0f, 2.0f, 1.0f);
+        }
+
+        Debug.Log("[Level3InteractionsBuilder] ExitGatePanel wired " +
+                  $"(left={(leftDoor != null ? leftDoor.name : "MISSING")}, " +
+                  $"right={(rightDoor != null ? rightDoor.name : "MISSING")}).");
     }
 
     static void SetupKeycardPanels()
@@ -120,8 +163,10 @@ public static class Level3InteractionsBuilder
         // Load the audio clips we copied into _Project/Audio/SFX
         var successClip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/_Project/Audio/SFX/HackSuccess.mp3");
         var failClip    = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/_Project/Audio/SFX/HackFail.mp3");
+        var alarmClip   = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/_Project/Audio/SFX/Server3Alarm.mp3");
 
-        string[] names = { "Server Controller", "Server Controller 2", "Server Controller 3" };
+        string[] names      = { "Server Controller", "Server Controller 2", "Server Controller 3" };
+        string[] groupNames = { "Servers 1",          "Servers 2",          "Servers 3"          };
         for (int i = 0; i < names.Length; i++)
         {
             var server = GameObject.Find(names[i]);
@@ -135,6 +180,19 @@ public static class Level3InteractionsBuilder
             // Audio (applied to all servers)
             if (successClip != null) hack.hackSuccessSound = successClip;
             if (failClip != null)    hack.hackFailSound    = failClip;
+
+            // Wire the parent containing all the server racks for this room.
+            var group = GameObject.Find(groupNames[i]);
+            if (group != null)
+            {
+                hack.hackedServersGroup = group.transform;
+                int rendCount = group.GetComponentsInChildren<Renderer>(true).Length;
+                Debug.Log($"[Level3InteractionsBuilder] Linked '{groupNames[i]}' to {names[i]} ({rendCount} renderers will tint red on hack).");
+            }
+            else
+            {
+                Debug.LogWarning($"[Level3InteractionsBuilder] Couldn't find '{groupNames[i]}' — server racks won't turn red on hack.");
+            }
 
             if (i == 0)                      // Server 1 — no prerequisites
             {
@@ -155,6 +213,12 @@ public static class Level3InteractionsBuilder
                 hack.firstAttemptDuration    = 5f;
                 hack.lockoutDuration         = 60f;
                 hack.finalHackDuration       = 10f;
+                if (alarmClip != null)
+                {
+                    hack.alarmSound      = alarmClip;
+                    hack.alarmLoopSound  = alarmClip;
+                    hack.alarmLoopVolume = 0.6f;
+                }
             }
             EditorUtility.SetDirty(hack);
 
