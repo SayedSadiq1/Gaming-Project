@@ -224,7 +224,9 @@ public static class CombatHUDBuilder
 
         var holder = NewRect("Minimap", parent, new Vector2(1, 1), new Vector2(1, 1), new Vector2(1, 1));
         var hRT = holder.GetComponent<RectTransform>();
-        hRT.anchoredPosition = new Vector2(-30, -30);
+        // Pushed DOWN to y=-260 so it sits below the friend's ScoreManager
+        // (score panel y=-20..-110, kill feed y=-120..-210). Top-right corner.
+        hRT.anchoredPosition = new Vector2(-30, -260);
         hRT.sizeDelta        = new Vector2(200, 200);
 
         var border = NewImage("Border", holder.transform, C_CYAN);

@@ -66,7 +66,7 @@ public class FadeToBlack : MonoBehaviour
         tRT.anchorMax = new Vector2(1, 0.5f);
         tRT.pivot     = new Vector2(0.5f, 0.5f);
         tRT.sizeDelta = new Vector2(0, 120);
-        tRT.anchoredPosition = new Vector2(0, 40);
+        tRT.anchoredPosition = new Vector2(0, 200);   // sits above the stats block
         var t = tGO.AddComponent<TextMeshProUGUI>();
         t.text = "MISSION COMPLETE";
         t.fontSize = 72;
@@ -76,21 +76,23 @@ public class FadeToBlack : MonoBehaviour
         t.characterSpacing = 8;
         t.raycastTarget = false;
 
-        // Subtitle
+        // Subtitle — taller now to fit the full stats block (score/kills/time)
         var sGO = new GameObject("Sub", typeof(RectTransform));
         sGO.transform.SetParent(go.transform, false);
         var sRT = sGO.GetComponent<RectTransform>();
         sRT.anchorMin = new Vector2(0, 0.5f);
         sRT.anchorMax = new Vector2(1, 0.5f);
-        sRT.pivot     = new Vector2(0.5f, 0.5f);
-        sRT.sizeDelta = new Vector2(0, 60);
-        sRT.anchoredPosition = new Vector2(0, -40);
+        sRT.pivot     = new Vector2(0.5f, 1f);
+        sRT.sizeDelta = new Vector2(0, 360);
+        sRT.anchoredPosition = new Vector2(0, -10);
         var s = sGO.AddComponent<TextMeshProUGUI>();
         s.text = "To be continued...";
         s.fontSize = 28;
         s.alignment = TextAlignmentOptions.Center;
-        s.color = new Color(1f, 1f, 1f, 0.7f);
+        s.color = new Color(1f, 1f, 1f, 0.85f);
         s.characterSpacing = 3;
+        s.lineSpacing = 8;
+        s.richText = true;
         s.raycastTarget = false;
 
         var inst = go.AddComponent<FadeToBlack>();

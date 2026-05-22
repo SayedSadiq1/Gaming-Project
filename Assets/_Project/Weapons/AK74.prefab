@@ -579,7 +579,7 @@ MonoBehaviour:
   MuzzleFlashPrefab: {fileID: 748781637555137343, guid: 231d5904bcc00cf4ca388ed66ff00936,
     type: 3}
   UnparentMuzzleFlash: 0
-  ShootSfx: {fileID: 8300000, guid: c347a98f956c745438b6c38f5b095bd3, type: 3}
+  ShootSfx: {fileID: 8300000, guid: 6701a438dfa0e104c8aa57d5fa568ded, type: 3}
   ChangeWeaponSfx: {fileID: 0}
   UseContinuousShootSound: 0
   ContinuousShootStartSfx: {fileID: 0}
@@ -598,4 +598,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FacilityBreach.WeaponReloadConfig
   ReloadTime: 2.5
-  ReloadSfx: {fileID: 8300000, guid: 7377f43747f76c942968481368121a56, type: 3}
+  ReloadSfx: {fileID: 8300000, guid: 0df43ee2b9b02e84ca92d956e5991801, type: 3}
