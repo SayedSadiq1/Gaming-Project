@@ -19,6 +19,11 @@ public class AutoSaveManager : MonoBehaviour
     public float saveInterval = 5f;
     float _timer;
 
+    // ── Pause flag (toggle from menu: Facility Breach → AutoSave: Pause/Resume).
+    //    Reads PlayerPrefs key 'FB_AutoSave_Paused' so it persists in the editor
+    //    and at runtime. When true, all save AND restore calls early-out.
+    public static bool IsPaused => PlayerPrefs.GetInt("FB_AutoSave_Paused", 0) == 1;
+
     // ── Dead enemy tracking (per scene, lifetime of session) ───────────────
     readonly List<Vector3> _deadEnemiesThisScene = new List<Vector3>();
     string _currentSceneKey = "";
@@ -91,8 +96,18 @@ public class AutoSaveManager : MonoBehaviour
     // ════════════════════════════════════════════════════════════════════════
     //  SAVE / RESTORE
     // ════════════════════════════════════════════════════════════════════════
-    void SafeSave()    { try { SaveCurrentState(); }    catch (System.Exception e) { Debug.LogWarning("[AutoSave] Save: " + e.Message); } }
-    void SafeRestore() { try { RestoreState(); }        catch (System.Exception e) { Debug.LogWarning("[AutoSave] Restore: " + e.Message); } }
+    void SafeSave()
+    {
+        if (IsPaused) { return; }   // paused via menu — silently skip
+        try { SaveCurrentState(); }
+        catch (System.Exception e) { Debug.LogWarning("[AutoSave] Save: " + e.Message); }
+    }
+    void SafeRestore()
+    {
+        if (IsPaused) { Debug.Log("[AutoSave] PAUSED — skipping restore."); return; }
+        try { RestoreState(); }
+        catch (System.Exception e) { Debug.LogWarning("[AutoSave] Restore: " + e.Message); }
+    }
 
     void SaveCurrentState()
     {

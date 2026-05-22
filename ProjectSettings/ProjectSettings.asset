@@ -888,11 +888,11 @@ PlayerSettings:
   activeInputHandler: 1
   windowsGamepadBackendHint: 0
   enableDirectStorage: 0
-  cloudProjectId: cabae9dd-20c6-41e6-8ab0-ada1952966f9
+  cloudProjectId: 70459797-1d15-44a4-879e-1c6972a0eec1
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: Games project
-  organizationId: sayedsadiq
+  projectName: 202200881 - runner
+  organizationId: kinderflip
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}

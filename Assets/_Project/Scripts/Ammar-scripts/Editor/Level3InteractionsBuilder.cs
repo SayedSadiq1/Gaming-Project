@@ -29,10 +29,84 @@ public static class Level3InteractionsBuilder
         SetupBlueKeycardPrefab();
         SetupKeycardPanels();
         SetupExitGate();
+        SetupLabExplosionCutscene();
         BuildPromptUI();
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log("[Level3InteractionsBuilder] ✓ Setup complete. Play, look at a target, hold F.");
+    }
+
+    static void SetupLabExplosionCutscene()
+    {
+        // Reuse the grenade Explosion prefab so the VFX/SFX matches frags.
+        var explosionPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/_Project/Weapons/AegisGrenades/Prefabs/Explosion.prefab");
+        if (explosionPrefab == null)
+            Debug.LogWarning("[Level3InteractionsBuilder] Couldn't load Explosion.prefab — cutscene will have no VFX.");
+
+        // Reuse or create the cutscene GameObject
+        var existing = GameObject.Find("LabExplosionCutscene");
+        if (existing != null) Undo.DestroyObjectImmediate(existing);
+
+        var go = new GameObject("LabExplosionCutscene");
+        Undo.RegisterCreatedObjectUndo(go, "Create Lab Explosion Cutscene");
+        var cut = go.AddComponent<LabExplosionCutscene>();
+        cut.explosionPrefab = explosionPrefab;
+
+        // Find the 3 player-placed MARKERS (any GameObject — they don't need a
+        // Camera component, just a position + rotation). Case-insensitive name
+        // match so "camera room 1", "Camera Room 1", "Camera_Room_1" all work.
+        var mark1 = FindMarkerByName("camera room 1");
+        var mark2 = FindMarkerByName("camera room 2");
+        var mark3 = FindMarkerByName("camera room 3");
+        var grp1 = GameObject.Find("Servers 1");
+        var grp2 = GameObject.Find("Servers 2");
+        var grp3 = GameObject.Find("Servers 3");
+
+        cut.roomShots = new System.Collections.Generic.List<LabExplosionCutscene.RoomShot>();
+        cut.roomShots.Add(new LabExplosionCutscene.RoomShot
+        {
+            cameraMarker    = mark1,
+            serversGroup    = grp1 != null ? grp1.transform : null,
+            secondaryBlasts = 2,
+            fieldOfView     = 60f,
+        });
+        cut.roomShots.Add(new LabExplosionCutscene.RoomShot
+        {
+            cameraMarker    = mark2,
+            serversGroup    = grp2 != null ? grp2.transform : null,
+            secondaryBlasts = 2,
+            fieldOfView     = 60f,
+        });
+        cut.roomShots.Add(new LabExplosionCutscene.RoomShot
+        {
+            cameraMarker    = mark3,
+            serversGroup    = grp3 != null ? grp3.transform : null,
+            secondaryBlasts = 3,
+            fieldOfView     = 60f,
+        });
+
+        EditorUtility.SetDirty(cut);
+
+        Debug.Log("[Level3InteractionsBuilder] ✓ LabExplosionCutscene wired. " +
+                  $"mark1={mark1!=null} mark2={mark2!=null} mark3={mark3!=null}, " +
+                  $"grp1={grp1!=null} grp2={grp2!=null} grp3={grp3!=null}");
+        if (mark1 == null || mark2 == null || mark3 == null)
+            Debug.LogWarning("[Level3InteractionsBuilder] One or more camera markers missing. " +
+                             "Place GameObjects named 'camera room 1/2/3' in the scene " +
+                             "(any 3D object works — its position + rotation defines the shot).");
+    }
+
+    static Transform FindMarkerByName(string name)
+    {
+        // Match any GameObject (including inactive) by case-insensitive name
+        foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (t == null) continue;
+            if (string.Equals(t.gameObject.name, name, System.StringComparison.OrdinalIgnoreCase))
+                return t;
+        }
+        return null;
     }
 
     static void SetupExitGate()

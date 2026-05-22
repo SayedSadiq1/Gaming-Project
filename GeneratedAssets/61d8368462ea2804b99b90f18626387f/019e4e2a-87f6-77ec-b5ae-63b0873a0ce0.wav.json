@@ -1,0 +1,15 @@
+{
+    "asset": "61d8368462ea2804b99b90f18626387f",
+    "fileName": "019e4e2a-87f6-77ec-b5ae-63b0873a0ce0.wav",
+    "prompt": "Seamlessly loopable dark bunker ambience, industrial low-end hum, eerie echoes, atmospheric background noise.",
+    "negativePrompt": "",
+    "model": "elevenlabs-sound-effects-v2",
+    "modelName": "ElevenLabs Sound Effects V2",
+    "customSeed": -1,
+    "w3CTraceId": "",
+    "feedback": 0,
+    "duration": 10.0,
+    "autoTrim": false,
+    "hasReference": false,
+    "voice": ""
+}

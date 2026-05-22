@@ -170,8 +170,20 @@ public class ExitGatePanel : MonoBehaviour, IInteractable
         _cutsceneStarted = true;
         if (fadeInDelay > 0f) yield return new WaitForSeconds(fadeInDelay);
 
-        FadeToBlack.Play(fadeDuration, completeText, completeSubText);
-        yield return new WaitForSeconds(fadeDuration + holdBlackBeforeLoad);
+        // If a LabExplosionCutscene exists in the scene, run it FIRST.
+        // It handles freezing the player, the cinematic camera, the staggered
+        // explosions across all 3 rooms, AND triggers FadeToBlack itself.
+        var lab = Object.FindFirstObjectByType<LabExplosionCutscene>();
+        if (lab != null)
+        {
+            yield return lab.Play();
+        }
+        else
+        {
+            // Fallback to simple fade-only if no cutscene was wired.
+            FadeToBlack.Play(fadeDuration, completeText, completeSubText);
+            yield return new WaitForSeconds(fadeDuration + holdBlackBeforeLoad);
+        }
 
         // Try loading the next scene; if it doesn't exist, stay black.
         if (!string.IsNullOrEmpty(nextSceneName))
