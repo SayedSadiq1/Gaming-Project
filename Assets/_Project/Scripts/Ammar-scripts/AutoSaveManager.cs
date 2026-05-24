@@ -6,18 +6,26 @@ using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Facility Breach — Auto-Save Manager (full state persistence)
-//  Saves & restores:
-//    • Player position, rotation, health, current weapon's ammo
-//    • Per-scene list of killed enemies (they stay dead after reload)
-//  Auto-spawns in every gameplay scene via SceneManager.sceneLoaded.
+//  Facility Breach — Auto-Save Manager (checkpoint-based)
+//
+//  ONLY saves at two checkpoints:
+//    1. Level entry  — fires ~1s after a gameplay scene loads
+//    2. Level extract — call AutoSaveManager.SaveCheckpoint("extract") from
+//                       ExitGatePanel when the player successfully escapes
+//
+//  Nothing is saved mid-level. No timer ticks, no quit-saves, no per-death
+//  writes. Player dies mid-level → Continue puts them back at level entry.
+//
+//  The Restore path still works — Continue from main menu teleports the
+//  player to wherever the last entry-save landed them (which is the level's
+//  default spawn position).
 // ─────────────────────────────────────────────────────────────────────────────
 public class AutoSaveManager : MonoBehaviour
 {
     public static AutoSaveManager Instance { get; private set; }
 
+    [Tooltip("Legacy field — no longer used now that saves are checkpoint-based.")]
     public float saveInterval = 5f;
-    float _timer;
 
     // ── Pause flag (toggle from menu: Facility Breach → AutoSave: Pause/Resume).
     //    Reads PlayerPrefs key 'FB_AutoSave_Paused' so it persists in the editor
@@ -57,11 +65,9 @@ public class AutoSaveManager : MonoBehaviour
         else
         {
             Debug.Log("[AutoSave] AutoSaveManager already exists.");
-            Instance._timer = 0f;
         }
 
         Instance._currentSceneKey = scene.name;
-        Instance.LoadDeadEnemyListForScene();
 
         if (SaveSystem.ContinueRequested)
         {
@@ -71,27 +77,39 @@ public class AutoSaveManager : MonoBehaviour
         }
         else
         {
-            Debug.Log("[AutoSave] ContinueRequested = false → new game.");
+            Debug.Log("[AutoSave] ContinueRequested = false → new game / fresh entry.");
         }
 
-        // Always subscribe to enemy deaths so kills get persisted
-        Instance.Invoke(nameof(SubscribeToEnemyDeaths), 0.7f);
-        // Apply previously-killed enemies regardless of restore flag
-        Instance.Invoke(nameof(RemovePreviouslyDeadEnemies), 0.6f);
+        // Checkpoint #1 — LEVEL ENTRY. Wait 1.0s so the Player has fully spawned
+        // (and any Continue-restore has happened) before snapshotting state.
+        Instance.Invoke(nameof(SaveEntryCheckpoint), 1.0f);
     }
 
-    void Update()
+    // Update / OnApplicationQuit / OnApplicationPause intentionally removed —
+    // saves are checkpoint-based now (entry + extract only).
+
+    void SaveEntryCheckpoint()
     {
-        _timer += Time.deltaTime;
-        if (_timer >= saveInterval)
-        {
-            _timer = 0f;
-            SafeSave();
-        }
+        if (IsPaused) return;
+        Debug.Log("[AutoSave] Checkpoint: LEVEL ENTRY → saving.");
+        SafeSave();
     }
 
-    void OnApplicationQuit() { Debug.Log("[AutoSave] Quitting — final save."); SafeSave(); }
-    void OnApplicationPause(bool paused) { if (paused) SafeSave(); }
+    /// <summary>
+    /// External checkpoint trigger. Call from ExitGatePanel when the player
+    /// successfully escapes the level. `tag` is a label for the log only.
+    /// </summary>
+    public static void SaveCheckpoint(string tag)
+    {
+        if (Instance == null)
+        {
+            Debug.LogWarning($"[AutoSave] SaveCheckpoint('{tag}') called but no Instance — skipping.");
+            return;
+        }
+        if (IsPaused) { Debug.Log($"[AutoSave] SaveCheckpoint('{tag}') — PAUSED, skipped."); return; }
+        Debug.Log($"[AutoSave] Checkpoint: {tag.ToUpper()} → saving.");
+        Instance.SafeSave();
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     //  SAVE / RESTORE

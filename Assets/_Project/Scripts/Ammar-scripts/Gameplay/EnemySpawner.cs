@@ -281,9 +281,46 @@ public class EnemySpawner : MonoBehaviour
             pos = hit.position;
 
         var go = Instantiate(prefab, pos, Quaternion.Euler(0, Random.Range(0f, 360f), 0));
+
+        // CRITICAL: spawned enemies have their `target` field null (only the
+        // hand-placed enemy had the Player dragged in). Without this, the
+        // EnemyGunAI / EnemyMovement Update() early-outs and they just stand
+        // there. Reflection-assign any public Transform target to the Player.
+        WireEnemyTargetToPlayer(go);
+
         _alive.Add(go);
         _spawnedSoFar++;
         if (debugLog) Debug.Log($"[EnemySpawner:{name}] Spawned {prefab.name} #{_spawnedSoFar} at {pos}.");
+    }
+
+    static Transform _cachedPlayer;
+    static void WireEnemyTargetToPlayer(GameObject enemy)
+    {
+        if (_cachedPlayer == null)
+        {
+            var p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null) _cachedPlayer = p.transform;
+        }
+        if (_cachedPlayer == null)
+        {
+            Debug.LogWarning("[EnemySpawner] No Player-tagged GameObject — spawned enemy can't acquire target.");
+            return;
+        }
+
+        int wired = 0;
+        foreach (var mb in enemy.GetComponentsInChildren<MonoBehaviour>(true))
+        {
+            if (mb == null) continue;
+            var t = mb.GetType();
+            // Public Transform fields named "target" — covers EnemyGunAI + EnemyMovement
+            var field = t.GetField("target", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (field != null && field.FieldType == typeof(Transform))
+            {
+                field.SetValue(mb, _cachedPlayer);
+                wired++;
+            }
+        }
+        // No log spam per-enemy unless debug; the spawn loop already logs.
     }
 
     Vector3 PickSpawnOrigin()

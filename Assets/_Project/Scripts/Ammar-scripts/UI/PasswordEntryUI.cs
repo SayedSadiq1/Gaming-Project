@@ -33,6 +33,8 @@ public class PasswordEntryUI : MonoBehaviour
     bool           _open;
     CursorLockMode _savedLockState;
     bool           _savedCursorVisible;
+    InteractionPromptUI _promptUI;
+    float          _savedPromptAlpha;
 
     void Start()
     {
@@ -59,6 +61,15 @@ public class PasswordEntryUI : MonoBehaviour
         if (group != null) { group.alpha = 1f; group.interactable = true; group.blocksRaycasts = true; }
         _open = true;
 
+        // Hide the InteractionPromptUI behind us — otherwise its "ENTERING
+        // PASSWORD..." text overlaps the bottom of this panel.
+        if (_promptUI == null) _promptUI = FindFirstObjectByType<InteractionPromptUI>();
+        if (_promptUI != null && _promptUI.group != null)
+        {
+            _savedPromptAlpha = _promptUI.group.alpha;
+            _promptUI.group.alpha = 0f;
+        }
+
         // Unlock cursor so the player can type / see the field cursor
         _savedLockState     = Cursor.lockState;
         _savedCursorVisible = Cursor.visible;
@@ -71,6 +82,11 @@ public class PasswordEntryUI : MonoBehaviour
         if (!_open) return;
         if (group != null) { group.alpha = 0f; group.interactable = false; group.blocksRaycasts = false; }
         _open = false;
+
+        // Restore the InteractionPromptUI (the PlayerInteractor will refresh
+        // its content on the next frame as soon as the raycast hits something).
+        if (_promptUI != null && _promptUI.group != null)
+            _promptUI.group.alpha = _savedPromptAlpha;
 
         // Restore cursor state
         Cursor.lockState = _savedLockState != CursorLockMode.None ? _savedLockState : CursorLockMode.Locked;

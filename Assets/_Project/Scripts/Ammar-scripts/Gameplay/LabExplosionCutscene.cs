@@ -53,6 +53,10 @@ public class LabExplosionCutscene : MonoBehaviour
     public string completeText        = "MISSION COMPLETE";
     public string completeSubText     = "Underground Labs cleared";
 
+    [Header("Next Level")]
+    [Tooltip("Scene loaded when the player clicks NEXT LEVEL on the Mission Complete screen. ExitGatePanel auto-wires this in the builder.")]
+    public string nextSceneName       = "Level4";
+
     [Header("Camera Shake")]
     public float shakeAmplitude = 0.25f;
     public float shakeDuration  = 0.4f;
@@ -77,11 +81,14 @@ public class LabExplosionCutscene : MonoBehaviour
 
         if (holdAfterLastShot > 0f) yield return new WaitForSeconds(holdAfterLastShot);
 
-        // Compose stats string and fade to black with mission complete + scoreboard
-        string sub = BuildStatsSubtitle();
-        FadeToBlack.Play(fadeDuration, completeText, sub);
+        // Show the styled Mission Complete screen with buttons (NEXT LEVEL / MAIN MENU).
+        // Replaces the old FadeToBlack text-only ending.
+        string stats = BuildStatsSubtitle();
+        MissionCompleteScreen.Show(completeText, stats, nextSceneName, fadeDuration);
 
-        yield return new WaitForSeconds(fadeDuration + holdBlackBeforeLoad);
+        // Stay alive briefly while the screen fades in — then yield forever, the
+        // buttons own the next transition.
+        yield return new WaitForSeconds(fadeDuration + 0.4f);
     }
 
     IEnumerator PlayOneRoomShot(RoomShot shot, int idx)
