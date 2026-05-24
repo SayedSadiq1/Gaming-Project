@@ -19,7 +19,8 @@ public class ExitGatePanel : MonoBehaviour, IInteractable
 {
     [Header("Conditions")]
     public int           requiredServers  = 3;
-    public bool          requireAllEnemiesDead = true;
+    [Tooltip("Minimum spawner-spawned enemies the player must kill before this gate unlocks. Read from EnemySpawner.TotalKills.")]
+    public int           requiredKills    = 30;
     public bool          requiresKeycard  = true;
     public KeycardColor  requiredColor    = KeycardColor.Blue;
 
@@ -33,7 +34,7 @@ public class ExitGatePanel : MonoBehaviour, IInteractable
     [Header("Prompts")]
     public string promptReady          = "PRESS F TO EXIT FACILITY";
     public string promptMissingServers = "HACK ALL SERVERS FIRST ({0}/{1})";
-    public string promptEnemiesAlive   = "ELIMINATE ALL HOSTILES ({0} REMAINING)";
+    public string promptNotEnoughKills = "ELIMINATE HOSTILES ({0}/{1} KILLED)";
     public string promptNoKeycard      = "REQUIRES BLUE KEYCARD";
 
     [Header("Cutscene")]
@@ -65,32 +66,6 @@ public class ExitGatePanel : MonoBehaviour, IInteractable
         _captured = true;
     }
 
-    int CountLiveEnemies()
-    {
-        // Use reflection so we don't need an asmdef reference to Unity.FPS.Game.
-        var healthType = System.Type.GetType("Unity.FPS.Game.Health, Unity.FPS.Game");
-        if (healthType == null) return 0;
-
-        int live = 0;
-        var all = Object.FindObjectsByType(healthType, FindObjectsSortMode.None);
-        foreach (var obj in all)
-        {
-            var comp = obj as Component;
-            if (comp == null) continue;
-            if (comp.CompareTag("Player")) continue;
-            // CurrentHealth public field on Unity FPS Health
-            float hp = 0f;
-            try
-            {
-                var f = healthType.GetField("CurrentHealth");
-                if (f != null) hp = (float)f.GetValue(comp);
-            }
-            catch { }
-            if (hp > 0.01f) live++;
-        }
-        return live;
-    }
-
     public bool CanInteract(GameObject interactor, out string reason)
     {
         if (_opened || _opening) { reason = "Already open"; return false; }
@@ -104,13 +79,13 @@ public class ExitGatePanel : MonoBehaviour, IInteractable
             return false;
         }
 
-        // Condition 2 — enemies
-        if (requireAllEnemiesDead)
+        // Condition 2 — kills (cumulative, from EnemySpawner.TotalKills)
+        if (requiredKills > 0)
         {
-            int alive = CountLiveEnemies();
-            if (alive > 0)
+            int kills = EnemySpawner.TotalKills;
+            if (kills < requiredKills)
             {
-                PromptText = string.Format(promptEnemiesAlive, alive);
+                PromptText = string.Format(promptNotEnoughKills, kills, requiredKills);
                 reason = PromptText;
                 return false;
             }
@@ -139,6 +114,10 @@ public class ExitGatePanel : MonoBehaviour, IInteractable
         if (_opened || _opening) return;
         _opening = true;
         if (openSound != null) AudioSource.PlayClipAtPoint(openSound, transform.position);
+
+        // Player has escaped successfully — silence the Server 3 alarm.
+        ServerHack.StopAllAlarmsForExit();
+
         StartCoroutine(SlideRoutine());
     }
 
