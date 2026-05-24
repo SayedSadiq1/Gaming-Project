@@ -32,6 +32,16 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
     public float  lockoutDuration       = 60f;
     public float  finalHackDuration     = 10f;
 
+    [Header("Password Phase (Server 2 style)")]
+    [Tooltip("If true: after the normal hold-to-hack finishes, a password panel opens. Hack only completes when the correct password is entered.")]
+    public bool   usePasswordPhase      = false;
+    [Tooltip("The password the player must enter — read from the sign behind the server in the prerequisite room.")]
+    public string requiredPassword      = "FB-Db-Rm2!78821";
+    [Tooltip("Text shown above the input field while the panel is open.")]
+    public string passwordTitle         = "PLEASE INSERT DATABASE PASSWORD";
+    [Tooltip("Hint shown above the title (small text). Tells the player where to find the password.")]
+    public string passwordHint          = "Hint: password on the back of the servers in room 1";
+
     [Header("Audio")]
     public AudioClip hackSuccessSound;
     public AudioClip hackFailSound;
@@ -40,6 +50,12 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
     public AudioClip alarmLoopSound;
     [Range(0f, 1f)] public float audioVolume = 1f;
     [Range(0f, 1f)] public float alarmLoopVolume = 0.7f;
+    [Tooltip("If true, the alarm KEEPS PLAYING after this server is hacked. Only the ExitGatePanel (or a manual ServerHack.StopAllAlarmsForExit call) can silence it. Used for Server 3.")]
+    public bool      keepAlarmUntilExit = false;
+
+    [Header("Enemy Spawner Signal")]
+    [Tooltip("When the alarm fires (first failed attempt), broadcast this signal so any EnemySpawner with matching signalName starts spawning waves.")]
+    public string spawnerSignalOnAlarm = "";
 
     [Header("Visual Feedback")]
     public Renderer indicatorRenderer;
@@ -55,12 +71,13 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
     public bool requiresKeycard = false;
     public KeycardColor requiredColor = KeycardColor.Blue;
 
-    enum Phase { Initial, FirstAttempt, Lockout, Unlocked, FinalAttempt, Hacked }
+    enum Phase { Initial, FirstAttempt, Lockout, Unlocked, FinalAttempt, AwaitingPassword, Hacked }
     Phase  _phase = Phase.Initial;
     float  _lockoutRemaining;
     float  _currentHoldTime;
     float  _maxHoldThisAttempt;
     bool   _wasHoldingSignificantly;
+    bool   _passwordPanelOpen;
 
     bool _hacked;
     AudioSource _alarmLoopSource;   // child of the Player while alarm is active
@@ -72,7 +89,11 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
 
     void OnEnable()
     {
-        if (serverId == 1) _hackedIds.Clear();
+        if (serverId == 1)
+        {
+            _hackedIds.Clear();
+            EnemySpawner.ResetTotalKills();   // fresh scene → fresh kill count
+        }
     }
 
     void Update()
@@ -102,6 +123,8 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
             {
                 case Phase.Lockout:
                     return $"INTRUDER DETECTED — SYSTEM LOCKED ({Mathf.CeilToInt(_lockoutRemaining)}s)";
+                case Phase.AwaitingPassword:
+                    return "PRESS F TO ENTER DATABASE PASSWORD";
                 default:
                     return promptText;
             }
@@ -113,6 +136,8 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
     {
         get
         {
+            // Password panel re-open is a press-once interaction, not a hold.
+            if (_phase == Phase.AwaitingPassword) return 0f;
             if (!useMultiPhase) return hackDuration;
             switch (_phase)
             {
@@ -130,6 +155,10 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
     {
         reason = "";
         if (_hacked) { reason = "Already hacked"; return false; }
+
+        // While the password panel is open, block the interactor so F-presses
+        // don't keep re-opening it / fire the underlying hold.
+        if (_passwordPanelOpen) { reason = "ENTERING PASSWORD..."; return false; }
 
         foreach (int prereq in prerequisiteServerIds)
         {
@@ -194,6 +223,14 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
     {
         if (_hacked) return;
 
+        // Password-phase reopen: player pressed F while we were already awaiting
+        // password input. Just re-open the panel.
+        if (_phase == Phase.AwaitingPassword)
+        {
+            OpenPasswordPanel();
+            return;
+        }
+
         if (useMultiPhase)
         {
             if (_phase == Phase.FirstAttempt || _phase == Phase.Initial)
@@ -206,13 +243,60 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
                 PlayClip(hackFailSound);
                 PlayClip(alarmSound);
                 StartAlarmLoop();
+                // Broadcast to any EnemySpawner listening — kicks off the reinforcement waves.
+                if (!string.IsNullOrEmpty(spawnerSignalOnAlarm))
+                {
+                    EnemySpawner.FireSignal(spawnerSignalOnAlarm);
+                    Debug.Log($"[ServerHack] Fired spawner signal '{spawnerSignalOnAlarm}'.");
+                }
                 Debug.Log($"[ServerHack] Server {serverId} FIRST ATTEMPT FAILED. Lockout {lockoutDuration}s started.");
                 return;
             }
             // Phase == Unlocked / FinalAttempt → SUCCESS
         }
 
+        // Password-phase Server 2 — first hold finished, gate on password entry.
+        if (usePasswordPhase)
+        {
+            _phase = Phase.AwaitingPassword;
+            Debug.Log($"[ServerHack] Server {serverId} stage 1 complete — awaiting password.");
+            OpenPasswordPanel();
+            return;
+        }
+
         ActuallyHack();
+    }
+
+    // ── Password panel ─────────────────────────────────────────────────────
+    void OpenPasswordPanel()
+    {
+        var panel = Object.FindFirstObjectByType<PasswordEntryUI>();
+        if (panel == null)
+        {
+            Debug.LogWarning("[ServerHack] No PasswordEntryUI in scene — cannot prompt for password. " +
+                             "Run 'Facility Breach → Setup Level 3 Interactions' to build it.");
+            // Fail-safe: skip the password gate so the level remains beatable.
+            ActuallyHack();
+            return;
+        }
+
+        _passwordPanelOpen = true;
+        panel.Show(passwordTitle, passwordHint, requiredPassword, OnPasswordResult);
+    }
+
+    void OnPasswordResult(bool success)
+    {
+        _passwordPanelOpen = false;
+        if (success)
+        {
+            Debug.Log($"[ServerHack] Server {serverId} password accepted.");
+            ActuallyHack();
+        }
+        else
+        {
+            Debug.Log($"[ServerHack] Server {serverId} password panel cancelled — staying in AwaitingPassword phase.");
+            PlayClip(hackFailSound);
+        }
     }
 
     void ActuallyHack()
@@ -234,7 +318,9 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
         if (indicatorLight != null) indicatorLight.color = hackedColor;
         if (hackVFX != null) Instantiate(hackVFX, transform.position, transform.rotation);
         PlayClip(hackSuccessSound);
-        StopAlarmLoop();
+        // Server 3 keeps the alarm screaming until the player actually escapes.
+        if (!keepAlarmUntilExit) StopAlarmLoop();
+        else Debug.Log($"[ServerHack] Server {serverId} hacked — alarm KEPT ALIVE until exit (keepAlarmUntilExit=true).");
 
         var hud = Object.FindFirstObjectByType<CombatHUD>();
         if (hud != null) hud.IncrementObjective();
@@ -309,6 +395,38 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
         Debug.Log("[ServerHack] Alarm loop stopped.");
     }
 
-    void OnDestroy() { StopAlarmLoop(); }
-    void OnDisable() { StopAlarmLoop(); }
+    void OnDestroy()
+    {
+        // If we want the alarm to persist (Server 3), DON'T stop it here. The
+        // AudioSource is parented to the Player so it survives the server's
+        // destruction. The scene unload will clean it up when the player escapes.
+        if (!keepAlarmUntilExit) StopAlarmLoop();
+    }
+
+    void OnDisable()
+    {
+        if (!keepAlarmUntilExit) StopAlarmLoop();
+    }
+
+    // ── Stop every alarm in the level — called by ExitGatePanel on escape ──
+    public static void StopAllAlarmsForExit()
+    {
+        // Find every ServerAlarmLoop GameObject (parented to the Player) and
+        // destroy them. More reliable than chasing ServerHack refs since
+        // keepAlarmUntilExit may have outlived the ServerHack itself.
+        int count = 0;
+        foreach (var obj in Object.FindObjectsByType<AudioSource>(FindObjectsSortMode.None))
+        {
+            if (obj == null) continue;
+            if (obj.gameObject.name != "ServerAlarmLoop") continue;
+            obj.Stop();
+            Object.Destroy(obj.gameObject);
+            count++;
+        }
+        // Also ask any still-alive ServerHack to drop its reference so it
+        // doesn't try to stop a destroyed source later.
+        foreach (var sh in Object.FindObjectsByType<ServerHack>(FindObjectsSortMode.None))
+            sh._alarmLoopSource = null;
+        if (count > 0) Debug.Log($"[ServerHack] StopAllAlarmsForExit silenced {count} alarm loop(s).");
+    }
 }

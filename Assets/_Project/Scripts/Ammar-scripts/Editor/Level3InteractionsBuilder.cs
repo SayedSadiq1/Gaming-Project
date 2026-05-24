@@ -31,6 +31,9 @@ public static class Level3InteractionsBuilder
         SetupExitGate();
         SetupLabExplosionCutscene();
         BuildPromptUI();
+        BuildPasswordEntryCanvas();
+        SetupPasswordSigns();
+        SetupServer3Spawners();
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log("[Level3InteractionsBuilder] ✓ Setup complete. Play, look at a target, hold F.");
@@ -126,7 +129,7 @@ public static class Level3InteractionsBuilder
         if (gate == null) gate = Undo.AddComponent<ExitGatePanel>(panel);
 
         gate.requiredServers       = 3;
-        gate.requireAllEnemiesDead = true;
+        gate.requiredKills         = 30;     // must drop at least 30 spawned enemies first
         gate.requiresKeycard       = true;
         gate.requiredColor         = KeycardColor.Blue;
 
@@ -274,19 +277,25 @@ public static class Level3InteractionsBuilder
                 hack.prerequisiteServerIds = new int[0];
                 hack.useMultiPhase = false;
             }
-            else if (i == 1)                 // Server 2 — needs Server 1 hacked
+            else if (i == 1)                 // Server 2 — needs Server 1 hacked + password phase
             {
                 hack.hackDuration = 10f;
                 hack.prerequisiteServerIds = new[] { 1 };
                 hack.useMultiPhase = false;
+                hack.usePasswordPhase = true;
+                hack.requiredPassword = "FB-Db-Rm2!78821";
+                hack.passwordTitle    = "PLEASE INSERT DATABASE PASSWORD";
+                hack.passwordHint     = "Hint: password on the back of the servers in room 1";
             }
-            else                             // Server 3 — multi-phase (5s fail → 60s lock → 10s hack)
+            else                             // Server 3 — multi-phase (5s fail → 60s lock → 10s hack) + waves
             {
                 hack.prerequisiteServerIds  = new[] { 1, 2 };
                 hack.useMultiPhase           = true;
                 hack.firstAttemptDuration    = 5f;
-                hack.lockoutDuration         = 60f;
+                hack.lockoutDuration         = 60f;   // matches 4 × 15s waves perfectly
                 hack.finalHackDuration       = 10f;
+                hack.keepAlarmUntilExit      = true;  // alarm persists through escape
+                hack.spawnerSignalOnAlarm    = "server3_lockout";
                 if (alarmClip != null)
                 {
                     hack.alarmSound      = alarmClip;
@@ -456,5 +465,320 @@ public static class Level3InteractionsBuilder
         img.color = color;
         img.raycastTarget = false;
         return img;
+    }
+
+    // ── Password Entry Canvas ──────────────────────────────────────────────
+    //  Modal panel that opens when Server 2's stage 1 hack completes.
+    //  Built once at scene-setup time. Hidden by default (CanvasGroup α = 0).
+    static void BuildPasswordEntryCanvas()
+    {
+        var existing = GameObject.Find("PasswordEntryCanvas");
+        if (existing != null) Undo.DestroyObjectImmediate(existing);
+
+        // Need an EventSystem for the TMP_InputField to receive focus / clicks
+        if (Object.FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
+        {
+            var es = new GameObject("EventSystem",
+                typeof(UnityEngine.EventSystems.EventSystem),
+                typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
+            Undo.RegisterCreatedObjectUndo(es, "Create EventSystem");
+        }
+
+        var canvasGO = new GameObject("PasswordEntryCanvas");
+        Undo.RegisterCreatedObjectUndo(canvasGO, "Build Password Entry Canvas");
+        var canvas = canvasGO.AddComponent<Canvas>();
+        canvas.renderMode  = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 80;                       // above the interaction prompt
+        var scaler = canvasGO.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.matchWidthOrHeight  = 0.5f;
+        canvasGO.AddComponent<GraphicRaycaster>();
+
+        var ui = canvasGO.AddComponent<PasswordEntryUI>();
+        ui.group = canvasGO.AddComponent<CanvasGroup>();
+
+        // Full-screen dim overlay
+        var dim = NewImage("Dim", canvasGO.transform, new Color(0, 0, 0, 0.55f));
+        var drt = dim.rectTransform;
+        drt.anchorMin = Vector2.zero; drt.anchorMax = Vector2.one;
+        drt.offsetMin = Vector2.zero; drt.offsetMax = Vector2.zero;
+
+        // Central panel
+        var panel = new GameObject("Panel", typeof(RectTransform));
+        panel.transform.SetParent(canvasGO.transform, false);
+        var rt = panel.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot     = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(720, 320);
+
+        var bg = panel.AddComponent<Image>();
+        bg.color = C_PANEL;
+        bg.raycastTarget = true;
+
+        // Cyan top accent bar
+        var accent = NewImage("Accent", panel.transform, C_CYAN);
+        var aRT = accent.rectTransform;
+        aRT.anchorMin = new Vector2(0, 1); aRT.anchorMax = new Vector2(1, 1);
+        aRT.pivot = new Vector2(0.5f, 1f);
+        aRT.sizeDelta = new Vector2(0, 4);
+
+        // Hint label (small, above title)
+        var hintGO = new GameObject("Hint", typeof(RectTransform));
+        hintGO.transform.SetParent(panel.transform, false);
+        var hrt = hintGO.GetComponent<RectTransform>();
+        hrt.anchorMin = new Vector2(0, 1); hrt.anchorMax = new Vector2(1, 1);
+        hrt.pivot = new Vector2(0.5f, 1f);
+        hrt.anchoredPosition = new Vector2(0, -24);
+        hrt.sizeDelta = new Vector2(-40, 30);
+        var hintTMP = hintGO.AddComponent<TextMeshProUGUI>();
+        hintTMP.text      = "Hint: password on the back of the servers in room 1";
+        hintTMP.fontSize  = 16;
+        hintTMP.color     = new Color(1f, 0.85f, 0.4f, 0.95f);   // amber hint colour
+        hintTMP.fontStyle = FontStyles.Italic;
+        hintTMP.alignment = TextAlignmentOptions.Center;
+        hintTMP.raycastTarget = false;
+        ui.hintLabel = hintTMP;
+
+        // Title label (main message)
+        var titleGO = new GameObject("Title", typeof(RectTransform));
+        titleGO.transform.SetParent(panel.transform, false);
+        var ttrt = titleGO.GetComponent<RectTransform>();
+        ttrt.anchorMin = new Vector2(0, 1); ttrt.anchorMax = new Vector2(1, 1);
+        ttrt.pivot = new Vector2(0.5f, 1f);
+        ttrt.anchoredPosition = new Vector2(0, -64);
+        ttrt.sizeDelta = new Vector2(-40, 40);
+        var titleTMP = titleGO.AddComponent<TextMeshProUGUI>();
+        titleTMP.text      = "PLEASE INSERT DATABASE PASSWORD";
+        titleTMP.fontSize  = 26;
+        titleTMP.color     = C_CYAN;
+        titleTMP.fontStyle = FontStyles.Bold;
+        titleTMP.characterSpacing = 3;
+        titleTMP.alignment = TextAlignmentOptions.Center;
+        titleTMP.raycastTarget = false;
+        ui.titleLabel = titleTMP;
+
+        // Input field (TMP_InputField)
+        var inputGO = new GameObject("InputField", typeof(RectTransform));
+        inputGO.transform.SetParent(panel.transform, false);
+        var irt = inputGO.GetComponent<RectTransform>();
+        irt.anchorMin = new Vector2(0.5f, 0.5f); irt.anchorMax = new Vector2(0.5f, 0.5f);
+        irt.pivot = new Vector2(0.5f, 0.5f);
+        irt.anchoredPosition = new Vector2(0, -10);
+        irt.sizeDelta = new Vector2(560, 56);
+        var inputBg = inputGO.AddComponent<Image>();
+        inputBg.color = new Color(0, 0, 0, 0.6f);
+
+        var input = inputGO.AddComponent<TMP_InputField>();
+
+        // Text area (viewport)
+        var viewport = new GameObject("Text Area", typeof(RectTransform));
+        viewport.transform.SetParent(inputGO.transform, false);
+        var vrt = viewport.GetComponent<RectTransform>();
+        vrt.anchorMin = new Vector2(0, 0); vrt.anchorMax = new Vector2(1, 1);
+        vrt.offsetMin = new Vector2(12, 8); vrt.offsetMax = new Vector2(-12, -8);
+        viewport.AddComponent<RectMask2D>();
+
+        // Inner text component
+        var textGO = new GameObject("Text", typeof(RectTransform));
+        textGO.transform.SetParent(viewport.transform, false);
+        var tx = textGO.GetComponent<RectTransform>();
+        tx.anchorMin = new Vector2(0, 0); tx.anchorMax = new Vector2(1, 1);
+        tx.offsetMin = Vector2.zero; tx.offsetMax = Vector2.zero;
+        var textTMP = textGO.AddComponent<TextMeshProUGUI>();
+        textTMP.fontSize = 22;
+        textTMP.color    = Color.white;
+        textTMP.alignment = TextAlignmentOptions.MidlineLeft;
+        textTMP.enableWordWrapping = false;
+
+        // Placeholder
+        var placeholderGO = new GameObject("Placeholder", typeof(RectTransform));
+        placeholderGO.transform.SetParent(viewport.transform, false);
+        var prt = placeholderGO.GetComponent<RectTransform>();
+        prt.anchorMin = new Vector2(0, 0); prt.anchorMax = new Vector2(1, 1);
+        prt.offsetMin = Vector2.zero; prt.offsetMax = Vector2.zero;
+        var phTMP = placeholderGO.AddComponent<TextMeshProUGUI>();
+        phTMP.text      = "type password and press Enter…";
+        phTMP.fontSize  = 20;
+        phTMP.color     = new Color(1, 1, 1, 0.4f);
+        phTMP.fontStyle = FontStyles.Italic;
+        phTMP.alignment = TextAlignmentOptions.MidlineLeft;
+        phTMP.enableWordWrapping = false;
+
+        input.textViewport          = vrt;
+        input.textComponent         = textTMP;
+        input.placeholder           = phTMP;
+        input.fontAsset             = textTMP.font;
+        input.lineType              = TMP_InputField.LineType.SingleLine;
+        input.contentType           = TMP_InputField.ContentType.Standard;
+        input.caretWidth            = 2;
+        input.customCaretColor      = true;
+        input.caretColor            = C_CYAN;
+        input.selectionColor        = new Color(C_CYAN.r, C_CYAN.g, C_CYAN.b, 0.4f);
+        ui.inputField = input;
+
+        // Status label (Wrong/Right feedback)
+        var statusGO = new GameObject("Status", typeof(RectTransform));
+        statusGO.transform.SetParent(panel.transform, false);
+        var srt = statusGO.GetComponent<RectTransform>();
+        srt.anchorMin = new Vector2(0, 0); srt.anchorMax = new Vector2(1, 0);
+        srt.pivot = new Vector2(0.5f, 0f);
+        srt.anchoredPosition = new Vector2(0, 56);
+        srt.sizeDelta = new Vector2(-40, 30);
+        var statusTMP = statusGO.AddComponent<TextMeshProUGUI>();
+        statusTMP.text      = "";
+        statusTMP.fontSize  = 18;
+        statusTMP.color     = new Color(1, 0.3f, 0.3f, 1f);
+        statusTMP.fontStyle = FontStyles.Bold;
+        statusTMP.alignment = TextAlignmentOptions.Center;
+        statusTMP.raycastTarget = false;
+        ui.statusLabel = statusTMP;
+
+        // Footer hint (Enter / Esc keys)
+        var footGO = new GameObject("FooterHint", typeof(RectTransform));
+        footGO.transform.SetParent(panel.transform, false);
+        var frt = footGO.GetComponent<RectTransform>();
+        frt.anchorMin = new Vector2(0, 0); frt.anchorMax = new Vector2(1, 0);
+        frt.pivot = new Vector2(0.5f, 0f);
+        frt.anchoredPosition = new Vector2(0, 18);
+        frt.sizeDelta = new Vector2(-40, 24);
+        var footTMP = footGO.AddComponent<TextMeshProUGUI>();
+        footTMP.text      = "[ ENTER ] submit     [ ESC ] cancel";
+        footTMP.fontSize  = 14;
+        footTMP.color     = new Color(1, 1, 1, 0.55f);
+        footTMP.alignment = TextAlignmentOptions.Center;
+        footTMP.raycastTarget = false;
+
+        ui.group.alpha          = 0f;
+        ui.group.interactable   = false;
+        ui.group.blocksRaycasts = false;
+
+        Debug.Log("[Level3InteractionsBuilder] PasswordEntryCanvas built.");
+    }
+
+    // ── World-space Password Sign ──────────────────────────────────────────
+    //  Finds every GameObject named "Password" (case-insensitive) in the scene
+    //  and attaches a 3D TextMeshPro child showing the database password +
+    //  a small "DB PASSWORD" header so the player knows what they're looking at.
+    static void SetupPasswordSigns()
+    {
+        const string SIGN_TEXT = "FB-Db-Rm2!78821";
+        int count = 0;
+
+        foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (t == null) continue;
+            if (!string.Equals(t.gameObject.name, "Password", System.StringComparison.OrdinalIgnoreCase)) continue;
+
+            // Remove any previous sign child so re-runs don't pile up
+            for (int i = t.childCount - 1; i >= 0; i--)
+            {
+                var child = t.GetChild(i);
+                if (child.name == "PasswordSign") Undo.DestroyObjectImmediate(child.gameObject);
+            }
+
+            // Header label (small, above the password)
+            var headerGO = new GameObject("PasswordSign");
+            Undo.RegisterCreatedObjectUndo(headerGO, "Create Password Sign");
+            headerGO.transform.SetParent(t, false);
+            headerGO.transform.localPosition = Vector3.zero;
+            headerGO.transform.localRotation = Quaternion.identity;
+
+            // Sub-child for header text
+            var hdr = new GameObject("Header");
+            hdr.transform.SetParent(headerGO.transform, false);
+            hdr.transform.localPosition = new Vector3(0, 0.18f, 0);
+            var hdrTMP = hdr.AddComponent<TextMeshPro>();
+            hdrTMP.text      = "DB PASSWORD — RM 2";
+            hdrTMP.fontSize  = 1.2f;
+            hdrTMP.color     = new Color(1f, 0.85f, 0.4f, 1f);   // amber
+            hdrTMP.fontStyle = FontStyles.Bold;
+            hdrTMP.alignment = TextAlignmentOptions.Center;
+
+            // Sub-child for the actual password
+            var pw = new GameObject("Password");
+            pw.transform.SetParent(headerGO.transform, false);
+            pw.transform.localPosition = Vector3.zero;
+            var pwTMP = pw.AddComponent<TextMeshPro>();
+            pwTMP.text      = SIGN_TEXT;
+            pwTMP.fontSize  = 2.4f;
+            pwTMP.color     = C_CYAN;
+            pwTMP.fontStyle = FontStyles.Bold;
+            pwTMP.alignment = TextAlignmentOptions.Center;
+            pwTMP.characterSpacing = 4;
+
+            count++;
+            Debug.Log($"[Level3InteractionsBuilder] Password sign attached to '{t.name}' at {t.position}.");
+        }
+
+        if (count == 0)
+        {
+            Debug.LogWarning("[Level3InteractionsBuilder] No GameObject named 'Password' found in the scene. " +
+                             "Place an empty GameObject named 'Password' behind 'server_2 (9)' in Room 1 " +
+                             "and re-run this menu — the sign will spawn as its child.");
+        }
+        else
+        {
+            Debug.Log($"[Level3InteractionsBuilder] ✓ {count} password sign(s) built (text = \"{SIGN_TEXT}\").");
+        }
+    }
+
+    // ── Server 3 Spawners ──────────────────────────────────────────────────
+    //  Finds every EnemySpawner in the scene and configures it for the
+    //  Server 3 lockout: signal-triggered, 4 waves × 4 enemies (16 per
+    //  spawner), 15s between waves. With 3 spawners that's 48 enemies total
+    //  spread across the level. ExitGatePanel requires the player to kill 30.
+    //
+    //  Waves are synchronised because all spawners receive the same
+    //  EnemySpawner.FireSignal("server3_lockout") broadcast from ServerHack
+    //  at the same instant.
+    static void SetupServer3Spawners()
+    {
+        const string SIGNAL = "server3_lockout";
+        const string DEFAULT_ENEMY_PATH = "Assets/_Project/Prefabs/Enemies/Soldier_demo_gun.prefab";
+
+        var enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DEFAULT_ENEMY_PATH);
+        if (enemyPrefab == null)
+            Debug.LogWarning($"[Level3InteractionsBuilder] Default enemy prefab not found at '{DEFAULT_ENEMY_PATH}'. " +
+                             "Spawners will be wired but you'll need to assign enemyPrefabs manually.");
+
+        var all = Object.FindObjectsByType<EnemySpawner>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (all.Length == 0)
+        {
+            Debug.LogWarning("[Level3InteractionsBuilder] No EnemySpawner components in the scene. " +
+                             "Use 'Facility Breach → Create Enemy Spawner' to place at least 3, then re-run setup.");
+            return;
+        }
+
+        foreach (var sp in all)
+        {
+            // Always set the signal/wave config — keep enemyPrefabs as-is if
+            // the user already set them, otherwise default to Soldier_demo_gun.
+            if ((sp.enemyPrefabs == null || sp.enemyPrefabs.Length == 0) && enemyPrefab != null)
+                sp.enemyPrefabs = new[] { enemyPrefab };
+
+            sp.triggerMode    = EnemySpawner.TriggerMode.OnSignal;
+            sp.signalName     = SIGNAL;
+            sp.oneShot        = true;
+
+            // 4 waves × 4 enemies = 16 per spawner. With 3 spawners → 48 total,
+            // 12 per wave (>= the user-requested "at least 10 per wave").
+            sp.totalToSpawn   = 16;
+            sp.perWave        = 4;
+            sp.spawnInterval  = 0.3f;
+            sp.waveInterval   = 15f;
+            sp.maxAliveAtOnce = 0;
+
+            sp.scatterRadius  = 2.0f;
+            sp.snapToNavMesh  = true;
+            sp.navMeshSnapDistance = 3.0f;
+
+            EditorUtility.SetDirty(sp);
+        }
+
+        Debug.Log($"[Level3InteractionsBuilder] ✓ Configured {all.Length} EnemySpawner(s) for Server 3 lockout. " +
+                  $"Signal='{SIGNAL}', 16 each (4 waves × 4), 15s between waves. " +
+                  $"Total enemies on alarm: {all.Length * 16}. Exit gate requires 30 kills.");
     }
 }
