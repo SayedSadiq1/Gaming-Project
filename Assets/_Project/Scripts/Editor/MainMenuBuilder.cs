@@ -63,7 +63,7 @@ public static class MainMenuBuilder
         s_ctrl = ctrlGO.AddComponent<MainMenuController>();
         s_ctrl.mainPanel       = mainPanel;
         s_ctrl.continueButton  = btnContinue;
-        s_ctrl.level1SceneName = "Test-Scene";
+        s_ctrl.level1SceneName = "Level1";
 
         var settingsPanel = BuildSettingsPanel(canvas.transform);
         var controlsPanel = BuildControlsPanel(canvas.transform);
@@ -86,7 +86,7 @@ public static class MainMenuBuilder
         // Save & build settings
         string scenePath = "Assets/_Project/Scenes/MainMenu.unity";
         EditorSceneManager.SaveScene(scene, scenePath);
-        AddScenesToBuildSettings(scenePath, "Assets/_Project/Scenes/Test-Scene.unity");
+        AddScenesToBuildSettings(scenePath, "Assets/_Project/Scenes/Level1.unity");
 
         Debug.Log("[MainMenuBuilder] Done — scene saved at " + scenePath);
     }

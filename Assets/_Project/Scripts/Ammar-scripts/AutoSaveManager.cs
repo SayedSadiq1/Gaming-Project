@@ -45,13 +45,23 @@ public class AutoSaveManager : MonoBehaviour
         OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
     }
 
+    // Scenes that are NOT gameplay levels — never get a save checkpoint.
+    // DeathScreen / MainMenu / LoseScene would otherwise clobber the saved
+    // "last level" value with their own name.
+    //
+    // LoseScene matters because the FPS Microgame's GameFlowManager briefly
+    // loads it on death BEFORE LoseSceneRedirect bounces us to DeathScreen —
+    // that brief load was overwriting K_SCENE = "LoseScene".
+    static readonly System.Collections.Generic.HashSet<string> _nonGameplayScenes =
+        new System.Collections.Generic.HashSet<string> { "MainMenu", "DeathScreen", "LoseScene" };
+
     static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         Debug.Log("[AutoSave] OnSceneLoaded → " + scene.name);
 
-        if (scene.name == "MainMenu")
+        if (_nonGameplayScenes.Contains(scene.name))
         {
-            Debug.Log("[AutoSave] Skipping MainMenu.");
+            Debug.Log($"[AutoSave] Skipping non-gameplay scene '{scene.name}'.");
             return;
         }
 
@@ -69,6 +79,16 @@ public class AutoSaveManager : MonoBehaviour
 
         Instance._currentSceneKey = scene.name;
 
+        // IMMEDIATELY record the current gameplay scene name. Doing this on
+        // the same frame as scene-load (not in a 1s-delayed Invoke) means
+        // the DeathScreen always shows the right "last level" even if the
+        // player dies in the first second.
+        if (!IsPaused && !string.IsNullOrEmpty(scene.name))
+        {
+            SaveSystem.Save(scene.name);
+            Debug.Log($"[AutoSave] K_SCENE = '{scene.name}' (immediate write).");
+        }
+
         if (SaveSystem.ContinueRequested)
         {
             Debug.Log("[AutoSave] ContinueRequested = true → restoring in 0.5s.");
@@ -80,8 +100,8 @@ public class AutoSaveManager : MonoBehaviour
             Debug.Log("[AutoSave] ContinueRequested = false → new game / fresh entry.");
         }
 
-        // Checkpoint #1 — LEVEL ENTRY. Wait 1.0s so the Player has fully spawned
-        // (and any Continue-restore has happened) before snapshotting state.
+        // Full state save (HP/ammo/pos) still waits 1.0s so the Player has
+        // spawned. K_SCENE was already written immediately above.
         Instance.Invoke(nameof(SaveEntryCheckpoint), 1.0f);
     }
 
@@ -91,7 +111,10 @@ public class AutoSaveManager : MonoBehaviour
     void SaveEntryCheckpoint()
     {
         if (IsPaused) return;
-        Debug.Log("[AutoSave] Checkpoint: LEVEL ENTRY → saving.");
+        // K_SCENE was already written immediately on scene-load in OnSceneLoaded.
+        // This delayed callback just snapshots the full state (HP/ammo/pos)
+        // after the Player has had time to spawn.
+        Debug.Log($"[AutoSave] Checkpoint: LEVEL ENTRY full state → saving.");
         SafeSave();
     }
 

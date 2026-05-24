@@ -27,7 +27,7 @@ public class DeathScreenController : MonoBehaviour
 
     [Header("Fallback")]
     [Tooltip("Scene to load if SaveSystem has no record of the last level.")]
-    public string fallbackScene = "Test-Scene";
+    public string fallbackScene = "Level1";
 
     void Start()
     {
@@ -35,31 +35,47 @@ public class DeathScreenController : MonoBehaviour
         Cursor.visible   = true;
         Time.timeScale   = 1f;
 
-        // Refresh the "Last level" label so the player sees what Play Again will load
-        string scene = SaveSystem.GetSavedScene();
-        if (string.IsNullOrEmpty(scene)) scene = fallbackScene;
+        // Resolve the scene Play Again will load, then update the label.
+        string scene = ResolvePlayAgainScene();
         if (lastLevelLabel != null)
             lastLevelLabel.text = $"Last level: <color=#00C8FF>{scene}</color>";
 
-        // Grey out Play Again if the target scene isn't actually buildable
-        if (playAgainButton != null)
-            playAgainButton.interactable = Application.CanStreamedLevelBeLoaded(scene);
+        // Always interactable — OnPlayAgain handles the can't-load case itself.
+        if (playAgainButton != null) playAgainButton.interactable = true;
     }
 
     public void OnPlayAgain()
     {
-        string scene = SaveSystem.GetSavedScene();
-        if (string.IsNullOrEmpty(scene)) scene = fallbackScene;
-
+        string scene = ResolvePlayAgainScene();
         if (!Application.CanStreamedLevelBeLoaded(scene))
         {
-            Debug.LogWarning($"[DeathScreen] Scene '{scene}' not in Build Settings.");
+            Debug.LogError($"[DeathScreen] Neither saved scene nor fallback '{scene}' is in Build Settings. " +
+                           "Add Level1.unity (or your start scene) to File → Build Settings.");
             return;
         }
 
         // Wipe THIS level only — leaves other levels' progress alone
         SaveSystem.ResetForLevel(scene);
         SceneManager.LoadScene(scene);
+    }
+
+    // Scene names that are NEVER a valid Play Again target — picking these
+    // would either loop back to the death screen or kick to the main menu.
+    static readonly System.Collections.Generic.HashSet<string> _nonGameplayScenes =
+        new System.Collections.Generic.HashSet<string> { "MainMenu", "DeathScreen", "LoseScene" };
+
+    /// <summary>
+    /// Returns the scene Play Again should load: saved scene if present, NOT
+    /// a non-gameplay scene, AND buildable. Otherwise the fallback.
+    /// </summary>
+    string ResolvePlayAgainScene()
+    {
+        string scene = SaveSystem.GetSavedScene();
+        if (!string.IsNullOrEmpty(scene)
+            && !_nonGameplayScenes.Contains(scene)
+            && Application.CanStreamedLevelBeLoaded(scene))
+            return scene;
+        return fallbackScene;
     }
 
     public void OnMainMenu()

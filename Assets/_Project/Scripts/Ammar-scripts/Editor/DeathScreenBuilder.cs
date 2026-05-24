@@ -62,7 +62,7 @@ public static class DeathScreenBuilder
         ctrl.playAgainButton = btnPlay;
         ctrl.mainMenuButton  = btnMenu;
         ctrl.lastLevelLabel  = lastLevelLabel;
-        ctrl.fallbackScene   = "Test-Scene";
+        ctrl.fallbackScene   = "Level1";
 
         UnityEventTools.AddPersistentListener(btnPlay.onClick, ctrl.OnPlayAgain);
         UnityEventTools.AddPersistentListener(btnMenu.onClick, ctrl.OnMainMenu);
