@@ -118,6 +118,11 @@ public class ExitGatePanel : MonoBehaviour, IInteractable
         // Player has escaped successfully — silence the Server 3 alarm.
         ServerHack.StopAllAlarmsForExit();
 
+        // Checkpoint #2: LEVEL EXTRACT — write the save now (the only mid-game
+        // save besides the level-entry one). Continue from main menu will land
+        // the player back at this level's start until they enter the next one.
+        AutoSaveManager.SaveCheckpoint("extract");
+
         StartCoroutine(SlideRoutine());
     }
 
@@ -149,38 +154,22 @@ public class ExitGatePanel : MonoBehaviour, IInteractable
         _cutsceneStarted = true;
         if (fadeInDelay > 0f) yield return new WaitForSeconds(fadeInDelay);
 
-        // If a LabExplosionCutscene exists in the scene, run it FIRST.
-        // It handles freezing the player, the cinematic camera, the staggered
-        // explosions across all 3 rooms, AND triggers FadeToBlack itself.
+        // If a LabExplosionCutscene exists in the scene, run it. It now drives
+        // the Mission Complete screen (with NEXT LEVEL / MAIN MENU buttons) on
+        // its own, so we don't auto-load the next scene anymore — the buttons do.
         var lab = Object.FindFirstObjectByType<LabExplosionCutscene>();
         if (lab != null)
         {
+            // Pass our next scene name through so the buttons know where to go.
+            lab.nextSceneName = nextSceneName;
             yield return lab.Play();
         }
         else
         {
-            // Fallback to simple fade-only if no cutscene was wired.
-            FadeToBlack.Play(fadeDuration, completeText, completeSubText);
-            yield return new WaitForSeconds(fadeDuration + holdBlackBeforeLoad);
+            // Fallback if someone trips the gate without the cinematic wired —
+            // skip straight to the Mission Complete screen.
+            MissionCompleteScreen.Show(completeText, completeSubText, nextSceneName, fadeDuration);
         }
-
-        // Try loading the next scene; if it doesn't exist, stay black.
-        if (!string.IsNullOrEmpty(nextSceneName))
-        {
-            try
-            {
-                if (Application.CanStreamedLevelBeLoaded(nextSceneName))
-                {
-                    SceneManager.LoadScene(nextSceneName);
-                    yield break;
-                }
-                Debug.LogWarning("[ExitGatePanel] Scene '" + nextSceneName + "' not in Build Settings — holding black screen.");
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogWarning("[ExitGatePanel] Couldn't load next scene: " + e.Message);
-            }
-        }
-        // Fallback: stay on the black "TO BE CONTINUED" screen.
+        // Done. The Mission Complete screen owns the transition from here.
     }
 }

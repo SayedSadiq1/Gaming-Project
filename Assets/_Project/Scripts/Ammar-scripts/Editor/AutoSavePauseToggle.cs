@@ -51,7 +51,7 @@ public static class AutoSavePauseToggle
         foreach (var k in keys) PlayerPrefs.DeleteKey(k);
 
         // Also wipe per-scene dead-enemy lists
-        foreach (var sceneKey in new[] { "Level1", "Level3", "Ammar-test", "Test-Scene", "Ali", "sayedhussainscene" })
+        foreach (var sceneKey in new[] { "Level1", "Level3", "Level-3", "Ammar-test", "Test-Scene", "Ali", "sayedhussainscene" })
             PlayerPrefs.DeleteKey("FB_DeadEnemies_" + sceneKey);
 
         PlayerPrefs.Save();

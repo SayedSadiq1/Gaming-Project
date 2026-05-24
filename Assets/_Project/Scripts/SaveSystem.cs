@@ -81,4 +81,28 @@ public static class SaveSystem
         PlayerPrefs.DeleteKey(K_TIME);
         PlayerPrefs.Save();
     }
+
+    /// <summary>
+    /// Wipes player state + dead-enemy list for ONE scene only. Used by the
+    /// death screen's PLAY AGAIN button — the player retries that level with
+    /// full HP / ammo / all enemies alive, without nuking the global save.
+    /// Leaves the scene name in K_SCENE so AutoSave knows where we are.
+    /// </summary>
+    public static void ResetForLevel(string sceneName)
+    {
+        PlayerPrefs.DeleteKey(K_POS_X);
+        PlayerPrefs.DeleteKey(K_POS_Y);
+        PlayerPrefs.DeleteKey(K_POS_Z);
+        PlayerPrefs.DeleteKey(K_ROT_Y);
+        PlayerPrefs.DeleteKey(K_HEALTH);
+        PlayerPrefs.DeleteKey(K_AMMO);
+        PlayerPrefs.DeleteKey(K_OBJ_DONE);
+        PlayerPrefs.DeleteKey(K_FRAGS);
+        PlayerPrefs.DeleteKey("FB_DeadEnemies_" + sceneName);
+        if (!string.IsNullOrEmpty(sceneName)) PlayerPrefs.SetString(K_SCENE, sceneName);
+        PlayerPrefs.SetString(K_TIME, System.DateTime.Now.ToString("yyyy-MM-dd HH:mm"));
+        PlayerPrefs.Save();
+        ContinueRequested = false;   // fresh spawn — don't restore
+        Debug.Log($"[SaveSystem] ResetForLevel('{sceneName}') — player state + dead-enemy list cleared.");
+    }
 }

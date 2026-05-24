@@ -73,6 +73,7 @@ public static class Level3InteractionsBuilder
             serversGroup    = grp1 != null ? grp1.transform : null,
             secondaryBlasts = 2,
             fieldOfView     = 60f,
+            lookAtOffset    = new Vector3(13.7f, -1.98f, -3.27f),   // tuned manually
         });
         cut.roomShots.Add(new LabExplosionCutscene.RoomShot
         {
@@ -80,6 +81,7 @@ public static class Level3InteractionsBuilder
             serversGroup    = grp2 != null ? grp2.transform : null,
             secondaryBlasts = 2,
             fieldOfView     = 60f,
+            lookAtOffset    = new Vector3(-1.24f, 0.83f, 3.57f),    // tuned manually
         });
         cut.roomShots.Add(new LabExplosionCutscene.RoomShot
         {
@@ -87,6 +89,7 @@ public static class Level3InteractionsBuilder
             serversGroup    = grp3 != null ? grp3.transform : null,
             secondaryBlasts = 3,
             fieldOfView     = 60f,
+            lookAtOffset    = Vector3.zero,                          // not tuned yet — set when you do
         });
 
         EditorUtility.SetDirty(cut);
@@ -691,7 +694,7 @@ public static class Level3InteractionsBuilder
             hdr.transform.localPosition = new Vector3(0, 0.18f, 0);
             var hdrTMP = hdr.AddComponent<TextMeshPro>();
             hdrTMP.text      = "DB PASSWORD — RM 2";
-            hdrTMP.fontSize  = 1.2f;
+            hdrTMP.fontSize  = 0.98f;
             hdrTMP.color     = new Color(1f, 0.85f, 0.4f, 1f);   // amber
             hdrTMP.fontStyle = FontStyles.Bold;
             hdrTMP.alignment = TextAlignmentOptions.Center;
@@ -702,7 +705,7 @@ public static class Level3InteractionsBuilder
             pw.transform.localPosition = Vector3.zero;
             var pwTMP = pw.AddComponent<TextMeshPro>();
             pwTMP.text      = SIGN_TEXT;
-            pwTMP.fontSize  = 2.4f;
+            pwTMP.fontSize  = 1.35f;
             pwTMP.color     = C_CYAN;
             pwTMP.fontStyle = FontStyles.Bold;
             pwTMP.alignment = TextAlignmentOptions.Center;

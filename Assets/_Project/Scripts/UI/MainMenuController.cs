@@ -17,7 +17,7 @@ public class MainMenuController : MonoBehaviour
     public Button     continueButton;          // greys out if no save
 
     [Header("Scene Names")]
-    public string level1SceneName = "Test-Scene";
+    public string level1SceneName = "Level1";
 
     void Start()
     {
