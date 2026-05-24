@@ -6,6 +6,7 @@
 [Ll]ogs/
 [Mm]emoryCaptures/
 UserSettings/
+.vscode/
 
 # Unity auto-generated IDE files (do not commit)
 *.csproj
@@ -14,6 +15,7 @@ UserSettings/
 *.user
 *.pidb
 *.userprefs
+settings.json
 
 # Claude Code
 .claude/
