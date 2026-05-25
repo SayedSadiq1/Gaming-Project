@@ -23,5 +23,17 @@ namespace Unity.FPS.Game
 
             OnShoot?.Invoke();
         }
+
+        // Enemy-friendly overload — no WeaponController needed.
+        public void ShootFromEnemy(GameObject owner)
+        {
+            Owner = owner;
+            InitialPosition = transform.position;
+            InitialDirection = transform.forward;
+            InheritedMuzzleVelocity = Vector3.zero;
+            InitialCharge = 0f;
+
+            OnShoot?.Invoke();
+        }
     }
 }

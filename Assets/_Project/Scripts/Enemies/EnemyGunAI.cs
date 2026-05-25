@@ -18,6 +18,10 @@ public class EnemyGunAI : MonoBehaviour
     public float stoppingDistance = 8f;
 
     [Header("Shooting")]
+    [Tooltip("Drag the EnemyWeaponMount child here. When assigned it overrides the fields below.")]
+    public EnemyWeaponMount weapon;
+
+    [Header("Shooting (fallback — used only when no weapon is assigned)")]
     public Transform firePoint;
     public GameObject projectilePrefab;
     public float fireRate = 1f;
@@ -34,6 +38,7 @@ public class EnemyGunAI : MonoBehaviour
 
         agent.speed = walkSpeed;
         agent.stoppingDistance = stoppingDistance;
+        agent.updateRotation = false;
     }
 
     void Update()
@@ -62,6 +67,8 @@ public class EnemyGunAI : MonoBehaviour
         {
             StopMoving();
         }
+
+        UpdateMovingAnimation();
     }
 
     bool CanSeeTarget()
@@ -102,17 +109,17 @@ public class EnemyGunAI : MonoBehaviour
     {
         agent.isStopped = false;
         agent.SetDestination(target.position);
-
-        if (anim != null)
-            anim.SetBool("IsMoving", true);
     }
 
     void StopMoving()
     {
         agent.isStopped = true;
+    }
 
+    void UpdateMovingAnimation()
+    {
         if (anim != null)
-            anim.SetBool("IsMoving", false);
+            anim.SetBool("IsMoving", agent.velocity.magnitude > 0.1f);
     }
 
     void FaceTarget()
@@ -123,29 +130,31 @@ public class EnemyGunAI : MonoBehaviour
         if (direction == Vector3.zero) return;
 
         Quaternion lookRotation = Quaternion.LookRotation(direction);
-        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, lookRotation, 360f * Time.deltaTime);
     }
 
     void Shoot()
     {
         if (Time.time < nextFireTime) return;
+        if (agent.velocity.magnitude > 0.5f) return;
 
         nextFireTime = Time.time + fireRate;
 
         if (anim != null)
-        {
             anim.SetTrigger("Shoot");
-        }
 
         Vector3 targetPoint = target.position + Vector3.up * 1.1f;
-        Vector3 shootDirection = (targetPoint - firePoint.position).normalized;
 
-        if (projectilePrefab != null)
+        if (weapon != null)
         {
-            Quaternion bulletRotation = Quaternion.LookRotation(shootDirection);
-            Instantiate(projectilePrefab, firePoint.position, bulletRotation);
+            // Use the mounted weapon — it handles bullet, flash, and sound.
+            weapon.Fire(targetPoint);
         }
-
-        Debug.Log("Enemy fired projectile");
+        else if (firePoint != null && projectilePrefab != null)
+        {
+            // Fallback: old direct-instantiate method.
+            Vector3 dir = (targetPoint - firePoint.position).normalized;
+            Instantiate(projectilePrefab, firePoint.position, Quaternion.LookRotation(dir));
+        }
     }
 }
