@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 // Add this to the keycard GameObject in the scene.
@@ -7,6 +8,9 @@ public class KeycardPickupTrigger : MonoBehaviour
 {
     [Tooltip("Must match the keycardID on the ChainDoorController this keycard unlocks.")]
     public string keycardID = "door_1";
+
+    // Fired when the keycard is picked up — used by SecurityLockdown.
+    public event Action OnPickedUp;
 
     [Header("Pickup trigger radius")]
     public float pickupRadius = 1.2f;
@@ -48,6 +52,7 @@ public class KeycardPickupTrigger : MonoBehaviour
         if (holder == null) return;
 
         holder.Collect(keycardID);
+        OnPickedUp?.Invoke();
 
         if (pickupSound != null)
             AudioSource.PlayClipAtPoint(pickupSound, transform.position);
