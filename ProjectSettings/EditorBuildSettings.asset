@@ -20,28 +20,28 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/Level5.unity
     guid: c213377a0e6dbac47ad2bd2fecd1bd71
-  - enabled: 0
+  - enabled: 1
     path: Assets/_Project/Scenes/Ali.unity
     guid: 85e50cb0f61257a489ad58fd70e81355
-  - enabled: 0
+  - enabled: 1
     path: Assets/_Project/Scenes/sayedhussainscene.unity
     guid: e25855050d1d8485999aaee106d1465c
   - enabled: 1
     path: Assets/_Project/Scenes/DeathScreen.unity
     guid: 8817a7e6d2f68cb4fa73854df532917c
-  - enabled: 0
+  - enabled: 1
     path: Assets/_Project/Scenes/Test-Scene.unity
     guid: 96134b4d615763a45a65e6c9deff64c6
-  - enabled: 0
+  - enabled: 1
     path: Assets/FPS/Scenes/IntroMenu.unity
     guid: 56e3faabc5bb30f49a68bb8f1292f988
-  - enabled: 0
+  - enabled: 1
     path: Assets/FPS/Scenes/WinScene.unity
     guid: 037d06fbede2b4041a843d9ee6fe750c
   - enabled: 1
     path: Assets/FPS/Scenes/LoseScene.unity
     guid: 72e5c65a45893714484002914e3fd521
-  - enabled: 0
+  - enabled: 1
     path: Assets/FPS/Scenes/MainScene.unity
     guid: d794a2ef8ba31d847ad3c19d03e2ddb9
   m_configObjects:

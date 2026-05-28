@@ -31678,7 +31678,7 @@ MonoBehaviour:
   exitGate: {fileID: 1497827069}
   panelA: {fileID: 1759694390}
   panelB: {fileID: 633535677}
-  alarmLoop: {fileID: 8300000, guid: 09e9ea3be9ca743d596b24697583664c, type: 3}
+  alarmLoop: {fileID: 8300000, guid: 7596f25da5e4a834d85358e2c59a48d1, type: 3}
   alarmVolume: 0.6
   lockdownColor: {r: 1, g: 0.2, b: 0.1, a: 1}
   clearedColor: {r: 0, g: 1, b: 0.55, a: 1}
