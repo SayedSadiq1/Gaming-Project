@@ -62,7 +62,9 @@ public class SettingsMenu : MonoBehaviour
 
     void OnSfxChanged(float v)
     {
-        PlayerPrefs.SetFloat(K_SFX, v);
+        // Apply the SFX volume to every non-music AudioSource in the scene.
+        // SfxVolume also writes the PlayerPref so the value persists.
+        SfxVolume.SetValue(v);
         if (sfxValue) sfxValue.text = $"{Mathf.RoundToInt(v * 100)}%";
     }
 
