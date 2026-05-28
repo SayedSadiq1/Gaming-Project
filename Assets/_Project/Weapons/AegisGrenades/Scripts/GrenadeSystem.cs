@@ -40,18 +40,31 @@ namespace Aegis.GrenadeSystem.HiEx
 
         private void Update()
         {
+            //  ── Co-op aware throw input ──
+            //  P1 (or single-player) → G on keyboard
+            //  P2 in co-op           → Left Bumper / L1 on gamepad
+            //  We tell which player we're on by comparing to CoopBootstrap.Player2.
+            bool pressed = false;
+            bool isP2 = CoopBootstrap.IsActive
+                        && CoopBootstrap.Player2 != null
+                        && (gameObject == CoopBootstrap.Player2
+                            || transform.IsChildOf(CoopBootstrap.Player2.transform));
 
-            //When G is pressed
-            if (Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
+            if (isP2)
             {
+                if (UnityEngine.InputSystem.Gamepad.current != null &&
+                    UnityEngine.InputSystem.Gamepad.current.leftShoulder.wasPressedThisFrame)
+                    pressed = true;
+            }
+            else
+            {
+                if (Keyboard.current != null && Keyboard.current.gKey.wasPressedThisFrame)
+                    pressed = true;
+            }
 
-                //Check if a grenade is already being thrown - if not, and there are grenades in the inventory, throw a grenade
-                // This is so grenades can't be spammed
-
-                if (grenadeCount > 0 && throwGrenade == null)
-                {
-                    throwGrenade = StartCoroutine(ThrowGrenade());
-                }
+            if (pressed && grenadeCount > 0 && throwGrenade == null)
+            {
+                throwGrenade = StartCoroutine(ThrowGrenade());
             }
         }
 

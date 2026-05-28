@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,6 +9,10 @@ public class ChainDoorController : MonoBehaviour
     [Header("Keycard")]
     [Tooltip("Must match the keycardID on the KeycardPickupTrigger that unlocks this door.")]
     public string keycardID = "door_1";
+
+    [Header("Power Requirement (optional)")]
+    [Tooltip("Assign an ElectricitySource here to require power before this door can open. Leave empty for no power requirement.")]
+    public ElectricitySource requiredPowerSource;
 
     [Header("Proximity")]
     [Tooltip("How close the player must be (XZ plane) to see the prompt and press E.")]
@@ -24,14 +29,27 @@ public class ChainDoorController : MonoBehaviour
     [Tooltip("Degrees per second.")]
     public float openSpeed = 120f;
 
+    [Header("Messages")]
+    public string msgNoPower    = "No power — start the generator first";
+    public string msgNoKeycard  = "Need keycard to open";
+    public string msgLockdown   = "SECURITY LOCKDOWN ACTIVE";
+    public string msgReady      = "[E]  Open Door";
+
     [Header("Audio")]
     public AudioClip openSound;
 
+    // Fires once when the door opens — used by Level1ObjectiveManager.
+    public event Action OnOpened;
+
+    bool _lockedDown;
     bool _opened;
     bool _opening;
     bool _playerInRange;
     bool _hasCard;
     float _t;
+
+    // Called by SecurityLockdown on this specific door instance only.
+    public void SetLockdown(bool locked) => _lockedDown = locked;
 
     Vector3    _startPos;
     Quaternion _startRot;
@@ -44,7 +62,7 @@ public class ChainDoorController : MonoBehaviour
     void Start()
     {
         // Find by component — no "Player" tag required.
-        _holder = Object.FindFirstObjectByType<ChainDoorKeycardHolder>();
+        _holder = FindAnyObjectByType<ChainDoorKeycardHolder>();
         if (_holder != null) _player = _holder.transform;
     }
 
@@ -69,7 +87,9 @@ public class ChainDoorController : MonoBehaviour
         _playerInRange = Vector2.Distance(doorXZ, playerXZ) <= interactDistance;
         _hasCard = _holder != null && _holder.HasKeycard(keycardID);
 
-        if (_playerInRange && _hasCard && Keyboard.current != null && Keyboard.current[Key.E].wasPressedThisFrame)
+        bool hasPower = requiredPowerSource == null || requiredPowerSource.IsPowered;
+
+        if (_playerInRange && _hasCard && hasPower && !_lockedDown && Keyboard.current != null && Keyboard.current[Key.E].wasPressedThisFrame)
             OpenDoor();
     }
 
@@ -79,6 +99,7 @@ public class ChainDoorController : MonoBehaviour
         _opening = true;
         _t       = 0f;
 
+        OnOpened?.Invoke();
         if (openSound != null) AudioSource.PlayClipAtPoint(openSound, transform.position);
 
         // The hinge pivot: use the assigned post-grabber, or fall back to this transform's origin.
@@ -98,8 +119,31 @@ public class ChainDoorController : MonoBehaviour
     {
         if (_opened || !_playerInRange) return;
 
-        string msg       = _hasCard ? "[E]  Open Door" : "Need keycard to open";
-        Color  textColor = _hasCard ? new Color(0f, 0.85f, 1f) : new Color(1f, 0.35f, 0.35f);
+        bool hasPower = requiredPowerSource == null || requiredPowerSource.IsPowered;
+
+        string msg;
+        Color  textColor;
+
+        if (_lockedDown)
+        {
+            msg       = msgLockdown;
+            textColor = new Color(1f, 0.2f, 0.1f, 1f); // red
+        }
+        else if (!hasPower)
+        {
+            msg       = msgNoPower;
+            textColor = new Color(1f, 0.6f, 0f, 1f);   // orange
+        }
+        else if (!_hasCard)
+        {
+            msg       = msgNoKeycard;
+            textColor = new Color(1f, 0.35f, 0.35f);   // red
+        }
+        else
+        {
+            msg       = msgReady;
+            textColor = new Color(0f, 0.85f, 1f);       // cyan
+        }
 
         GUIStyle style = new GUIStyle(GUI.skin.box)
         {

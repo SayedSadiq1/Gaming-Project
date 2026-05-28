@@ -155,11 +155,9 @@ public class MissionCompleteScreen : MonoBehaviour
         brRT.pivot = new Vector2(0.5f, 0); brRT.anchoredPosition = new Vector2(0, 110);
         brRT.sizeDelta = new Vector2(960, 90);
 
-        _nextBtn = BuildButton(btnRow.transform, "NEXT LEVEL", new Vector2(-220, 0));
-        _menuBtn = BuildButton(btnRow.transform, "MAIN MENU",  new Vector2( 220, 0));
-
+        // Single centered NEXT LEVEL button (Main Menu button removed per design).
+        _nextBtn = BuildButton(btnRow.transform, "NEXT LEVEL", Vector2.zero);
         _nextBtn.onClick.AddListener(OnNextLevel);
-        _menuBtn.onClick.AddListener(OnMainMenu);
     }
 
     IEnumerator ShowRoutine(string title, string stats, float duration)
@@ -167,9 +165,10 @@ public class MissionCompleteScreen : MonoBehaviour
         if (_titleText != null) _titleText.text = title ?? "MISSION COMPLETE";
         if (_statsText != null) _statsText.text = stats ?? "";
 
-        // Grey out Next Level if the scene isn't built yet
-        bool nextValid = !string.IsNullOrEmpty(_nextScene) && Application.CanStreamedLevelBeLoaded(_nextScene);
-        if (_nextBtn != null) _nextBtn.interactable = nextValid;
+        // Next Level button is always clickable; if the next scene isn't in Build
+        // Settings yet, OnNextLevel falls back to the main menu so the player
+        // never gets stuck on this screen.
+        if (_nextBtn != null) _nextBtn.interactable = true;
 
         // Free the cursor so the player can click buttons
         Cursor.lockState = CursorLockMode.None;
@@ -190,16 +189,20 @@ public class MissionCompleteScreen : MonoBehaviour
 
     void OnNextLevel()
     {
-        if (string.IsNullOrEmpty(_nextScene)) return;
-        if (!Application.CanStreamedLevelBeLoaded(_nextScene))
-        {
-            Debug.LogWarning($"[MissionComplete] Next scene '{_nextScene}' not in Build Settings.");
-            return;
-        }
         SaveSystem.ContinueRequested = false;
+
+        // Fall back to the main menu if the next scene isn't in Build Settings,
+        // so the button always does *something* and never feels broken.
+        string sceneToLoad = _nextScene;
+        if (string.IsNullOrEmpty(sceneToLoad) || !Application.CanStreamedLevelBeLoaded(sceneToLoad))
+        {
+            Debug.LogWarning($"[MissionComplete] Next scene '{_nextScene}' missing from Build Settings — going to MainMenu instead.");
+            sceneToLoad = "MainMenu";
+        }
+
         _instance = null;
         Destroy(gameObject);
-        SceneManager.LoadScene(_nextScene);
+        LoadingScreen.Load(sceneToLoad);
     }
 
     void OnMainMenu()
@@ -207,7 +210,7 @@ public class MissionCompleteScreen : MonoBehaviour
         SaveSystem.ContinueRequested = false;
         _instance = null;
         Destroy(gameObject);
-        SceneManager.LoadScene("MainMenu");
+        LoadingScreen.Load("MainMenu");
     }
 
     // ── Helpers (mirrored from MainMenuBuilder so the style is identical) ──

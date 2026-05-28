@@ -15,9 +15,14 @@ public class MainMenuController : MonoBehaviour
 
     [Header("Buttons")]
     public Button     continueButton;          // greys out if no save
+    [Tooltip("Toggles co-op on/off. Label updates to 'CO-OP: ON' / 'CO-OP: OFF'.")]
+    public Button     coopToggleButton;
+    public TMPro.TextMeshProUGUI coopToggleLabel;
 
     [Header("Scene Names")]
     public string level1SceneName = "Level1";
+
+    public const string PREF_COOP_ENABLED = "FB_CoopEnabled";
 
     void Start()
     {
@@ -26,6 +31,26 @@ public class MainMenuController : MonoBehaviour
         Time.timeScale   = 1f;
         ShowMain();
         UpdateContinueButtonState();
+        RefreshCoopLabel();
+    }
+
+    public void OnToggleCoop()
+    {
+        bool now = PlayerPrefs.GetInt(PREF_COOP_ENABLED, 0) == 1;
+        PlayerPrefs.SetInt(PREF_COOP_ENABLED, now ? 0 : 1);
+        PlayerPrefs.Save();
+        RefreshCoopLabel();
+        Debug.Log("[MainMenu] Co-op toggled → " + (!now ? "ON" : "OFF"));
+    }
+
+    void RefreshCoopLabel()
+    {
+        if (coopToggleLabel == null) return;
+        bool on = PlayerPrefs.GetInt(PREF_COOP_ENABLED, 0) == 1;
+        coopToggleLabel.text = on ? "CO-OP: ON" : "CO-OP: OFF";
+        coopToggleLabel.color = on
+            ? new UnityEngine.Color32(0x4D, 0xFF, 0x4D, 0xFF)
+            : new UnityEngine.Color32(0xFF, 0x4D, 0x4D, 0xFF);
     }
 
     public void UpdateContinueButtonState()
@@ -41,7 +66,7 @@ public class MainMenuController : MonoBehaviour
         SaveSystem.DeleteSave();
         SaveSystem.Save(level1SceneName, 100f, 30);     // placeholder so HasSave() returns true next session
         SaveSystem.ContinueRequested = false;            // start at default spawn, not restore
-        SceneManager.LoadScene(level1SceneName);
+        LoadingScreen.Load(level1SceneName);
     }
 
     public void OnContinue()     // CONTINUE — load saved scene + restore player state
@@ -50,7 +75,7 @@ public class MainMenuController : MonoBehaviour
         string scene = SaveSystem.GetSavedScene();
         if (string.IsNullOrEmpty(scene)) return;
         SaveSystem.ContinueRequested = true;             // AutoSaveManager will restore position/HP on load
-        SceneManager.LoadScene(scene);
+        LoadingScreen.Load(scene);
     }
 
     public void OnSettings() { Toggle(false, true,  false, false); }

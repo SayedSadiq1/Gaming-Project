@@ -23,6 +23,8 @@ public class ExitGatePanel : MonoBehaviour, IInteractable
     public int           requiredKills    = 30;
     public bool          requiresKeycard  = true;
     public KeycardColor  requiredColor    = KeycardColor.Blue;
+    [Tooltip("ID for the team's keycard system (ChainDoorKeycardHolder). Either this OR the legacy colour matches to unlock.")]
+    public string        keycardID        = "blue_keycard";
 
     [Header("Doors")]
     public Transform leftDoor;
@@ -91,12 +93,28 @@ public class ExitGatePanel : MonoBehaviour, IInteractable
             }
         }
 
-        // Condition 3 — keycard
+        // Condition 3 — keycard (accept EITHER team's string-ID system OR legacy colour)
         if (requiresKeycard)
         {
-            var inv = interactor.GetComponent<KeycardInventory>();
-            if (inv == null) inv = interactor.GetComponentInParent<KeycardInventory>();
-            if (inv == null || !inv.HasKeycard(requiredColor))
+            bool hasKey = false;
+
+            // Team system first
+            if (!string.IsNullOrEmpty(keycardID))
+            {
+                var holder = interactor.GetComponent<ChainDoorKeycardHolder>()
+                          ?? interactor.GetComponentInParent<ChainDoorKeycardHolder>();
+                if (holder != null && holder.HasKeycard(keycardID)) hasKey = true;
+            }
+
+            // Legacy fallback
+            if (!hasKey)
+            {
+                var inv = interactor.GetComponent<KeycardInventory>();
+                if (inv == null) inv = interactor.GetComponentInParent<KeycardInventory>();
+                if (inv != null && inv.HasKeycard(requiredColor)) hasKey = true;
+            }
+
+            if (!hasKey)
             {
                 PromptText = promptNoKeycard;
                 reason = PromptText;
@@ -118,10 +136,8 @@ public class ExitGatePanel : MonoBehaviour, IInteractable
         // Player has escaped successfully — silence the Server 3 alarm.
         ServerHack.StopAllAlarmsForExit();
 
-        // Checkpoint #2: LEVEL EXTRACT — write the save now (the only mid-game
-        // save besides the level-entry one). Continue from main menu will land
-        // the player back at this level's start until they enter the next one.
-        AutoSaveManager.SaveCheckpoint("extract");
+        // Note: the extract checkpoint save was intentionally removed.
+        // Saving now only happens once — on level entry (SaveEntryCheckpoint).
 
         StartCoroutine(SlideRoutine());
     }
