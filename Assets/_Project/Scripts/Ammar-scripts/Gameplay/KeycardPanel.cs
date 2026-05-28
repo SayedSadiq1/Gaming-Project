@@ -14,6 +14,9 @@ public class KeycardPanel : MonoBehaviour, IInteractable
 {
     [Header("Keycard Required")]
     public KeycardColor requiredColor = KeycardColor.Blue;
+    [Tooltip("If set, also unlocks when the player has a team-system keycard with this ID " +
+             "(ChainDoorKeycardHolder). Leave empty to only use the legacy color system.")]
+    public string keycardID = "blue_keycard";
 
     [Header("Doors")]
     public Transform leftDoor;
@@ -52,6 +55,21 @@ public class KeycardPanel : MonoBehaviour, IInteractable
     public bool CanInteract(GameObject interactor, out string reason)
     {
         if (_opened || _opening) { reason = "Already open"; return false; }
+
+        // 1) Team's keycard system — ChainDoorKeycardHolder with string IDs.
+        if (!string.IsNullOrEmpty(keycardID))
+        {
+            var holder = interactor.GetComponent<ChainDoorKeycardHolder>()
+                      ?? interactor.GetComponentInParent<ChainDoorKeycardHolder>();
+            if (holder != null && holder.HasKeycard(keycardID))
+            {
+                PromptText = unlockedText;
+                reason = "";
+                return true;
+            }
+        }
+
+        // 2) Legacy colour-based system (KeycardInventory).
         var inv = interactor.GetComponent<KeycardInventory>();
         if (inv == null) inv = interactor.GetComponentInParent<KeycardInventory>();
         if (inv != null && inv.HasKeycard(requiredColor))
@@ -60,6 +78,7 @@ public class KeycardPanel : MonoBehaviour, IInteractable
             reason = "";
             return true;
         }
+
         PromptText = lockedText;
         reason = lockedText;
         return false;

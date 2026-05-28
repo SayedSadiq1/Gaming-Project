@@ -34,7 +34,7 @@ public static class LoseSceneRedirect
             if (Application.CanStreamedLevelBeLoaded(OUR_DEATH_SCENE))
             {
                 Debug.Log("[LoseSceneRedirect] LoseScene loaded — redirecting to DeathScreen.");
-                SceneManager.LoadScene(OUR_DEATH_SCENE);
+                LoadingScreen.Load(OUR_DEATH_SCENE);
             }
             return;
         }

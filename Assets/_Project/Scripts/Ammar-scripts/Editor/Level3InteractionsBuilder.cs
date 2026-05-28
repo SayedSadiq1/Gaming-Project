@@ -135,6 +135,7 @@ public static class Level3InteractionsBuilder
         gate.requiredKills         = 30;     // must drop at least 30 spawned enemies first
         gate.requiresKeycard       = true;
         gate.requiredColor         = KeycardColor.Blue;
+        gate.keycardID             = "blue_keycard";
 
         gate.leftDoor        = leftDoor  != null ? leftDoor.transform  : null;
         gate.rightDoor       = rightDoor != null ? rightDoor.transform : null;
@@ -194,6 +195,7 @@ public static class Level3InteractionsBuilder
         var kp = panel.GetComponent<KeycardPanel>();
         if (kp == null) kp = Undo.AddComponent<KeycardPanel>(panel);
         kp.requiredColor   = KeycardColor.Blue;
+        kp.keycardID       = "blue_keycard";   // team's keycard system uses this string ID
         kp.leftDoor        = leftDoor;
         kp.rightDoor       = rightDoor;
         kp.leftOpenOffset  = leftOffset;
@@ -221,6 +223,10 @@ public static class Level3InteractionsBuilder
 
         if (player.GetComponent<KeycardInventory>() == null)
             Undo.AddComponent<KeycardInventory>(player);
+
+        // Add team's ChainDoorKeycardHolder so the team's keycard.prefab works on our doors.
+        if (player.GetComponent<ChainDoorKeycardHolder>() == null)
+            Undo.AddComponent<ChainDoorKeycardHolder>(player);
 
         var pi = player.GetComponent<PlayerInteractor>();
         if (pi == null) pi = Undo.AddComponent<PlayerInteractor>(player);
@@ -317,68 +323,78 @@ public static class Level3InteractionsBuilder
         }
     }
 
+    // Replace any old user `BlueKeycard` instances in the scene with the
+    // team's `Assets/_Project/Prefabs/Level1/gate system/keycard.prefab`.
+    // Preserves position/rotation/scale. Sets keycardID = "blue_keycard"
+    // (which matches the IDs we wire onto KeycardPanel + ExitGatePanel).
     static void SetupBlueKeycardPrefab()
     {
-        // 1) Update the asset prefab so any future instances are correct
-        string path = "Assets/_Project/Prefabs/BlueKeycard.prefab";
-        var bk = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-        if (bk != null)
+        const string TEAM_PATH    = "Assets/_Project/Prefabs/Level1/gate system/keycard.prefab";
+        const string KEYCARD_ID   = "blue_keycard";
+
+        var teamPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(TEAM_PATH);
+        if (teamPrefab == null)
         {
-            var contents = PrefabUtility.LoadPrefabContents(path);
-
-            var pickup = contents.GetComponent<KeycardPickup>();
-            if (pickup == null) pickup = contents.AddComponent<KeycardPickup>();
-            // ── Force-reset to press-once defaults ──
-            pickup.color         = KeycardColor.Blue;
-            pickup.holdDuration  = 0f;
-
-            var col = contents.GetComponent<Collider>();
-            if (col == null)
-            {
-                var box = contents.AddComponent<BoxCollider>();
-                box.size = new Vector3(0.6f, 0.4f, 0.6f);
-                col = box;
-            }
-
-            PrefabUtility.SaveAsPrefabAsset(contents, path);
-            PrefabUtility.UnloadPrefabContents(contents);
-            Debug.Log("[Level3InteractionsBuilder] BlueKeycard.prefab → KeycardPickup (press-once) + collider.");
-        }
-        else
-        {
-            Debug.LogWarning("[Level3InteractionsBuilder] No BlueKeycard.prefab at " + path);
+            Debug.LogError($"[Level3InteractionsBuilder] Couldn't load team keycard at '{TEAM_PATH}'. " +
+                           "Old BlueKeycard left in place.");
+            return;
         }
 
-        // 2) Patch any in-scene BlueKeycard instances — FORCE-RESET fields so
-        //    the old "HOLD F" / 0.15s hold gets wiped.
-        var sceneObjs = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        int patched = 0;
-        foreach (var t in sceneObjs)
+        // Gather all OLD user BlueKeycard instances (anything in the scene named
+        // BlueKeycard that isn't already a team-keycard with KeycardPickupTrigger).
+        var oldKeycards = new System.Collections.Generic.List<Transform>();
+        foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if (t == null) continue;
             string n = t.gameObject.name;
             if (n.IndexOf("BlueKeycard", System.StringComparison.OrdinalIgnoreCase) < 0) continue;
             if (PrefabUtility.IsPartOfPrefabAsset(t.gameObject)) continue;
-
-            var go = t.gameObject;
-
-            var p = go.GetComponent<KeycardPickup>();
-            if (p == null) p = Undo.AddComponent<KeycardPickup>(go);
-            // FORCE-RESET — overrides any old serialized values
-            p.color        = KeycardColor.Blue;
-            p.holdDuration = 0f;
-            EditorUtility.SetDirty(p);
-
-            if (go.GetComponent<Collider>() == null)
-            {
-                var box = Undo.AddComponent<BoxCollider>(go);
-                box.size = new Vector3(0.6f, 0.4f, 0.6f);
-            }
-            patched++;
-            Debug.Log($"[Level3InteractionsBuilder] In-scene BlueKeycard '{n}' → reset to press-once.");
+            if (t.gameObject.GetComponent<KeycardPickupTrigger>() != null) continue;   // already team's
+            oldKeycards.Add(t);
         }
-        if (patched == 0)
-            Debug.LogWarning("[Level3InteractionsBuilder] No in-scene BlueKeycard found. Drag the prefab into the scene first.");
+
+        // If a team keycard already exists in the scene, just make sure its ID is right
+        // and don't bother replacing anything.
+        var existingTeam = Object.FindFirstObjectByType<KeycardPickupTrigger>();
+        if (existingTeam != null)
+        {
+            existingTeam.keycardID = KEYCARD_ID;
+            EditorUtility.SetDirty(existingTeam);
+            Debug.Log($"[Level3InteractionsBuilder] Team keycard already in scene → set keycardID='{KEYCARD_ID}'.");
+            // Also delete any leftover old BlueKeycard instances so we don't have two
+            foreach (var t in oldKeycards) Undo.DestroyObjectImmediate(t.gameObject);
+            return;
+        }
+
+        // No team keycard yet — spawn one at the position of the first old BlueKeycard.
+        Vector3   spawnPos = oldKeycards.Count > 0 ? oldKeycards[0].position : Vector3.zero;
+        Quaternion spawnRot = oldKeycards.Count > 0 ? oldKeycards[0].rotation : Quaternion.identity;
+        Vector3   spawnScale = oldKeycards.Count > 0 ? oldKeycards[0].localScale : Vector3.one;
+
+        if (oldKeycards.Count == 0)
+        {
+            Debug.LogWarning("[Level3InteractionsBuilder] No old BlueKeycard to replace. " +
+                             "Spawning team keycard at world origin — please move it to where you want it.");
+        }
+
+        var instance = (GameObject)PrefabUtility.InstantiatePrefab(teamPrefab);
+        Undo.RegisterCreatedObjectUndo(instance, "Spawn Team Keycard");
+        instance.transform.position   = spawnPos;
+        instance.transform.rotation   = spawnRot;
+        instance.transform.localScale = spawnScale;
+
+        var trigger = instance.GetComponent<KeycardPickupTrigger>();
+        if (trigger != null)
+        {
+            trigger.keycardID = KEYCARD_ID;
+            EditorUtility.SetDirty(trigger);
+        }
+
+        // Now delete the old BlueKeycard(s)
+        foreach (var t in oldKeycards) Undo.DestroyObjectImmediate(t.gameObject);
+
+        Debug.Log($"[Level3InteractionsBuilder] ✓ Replaced {oldKeycards.Count} old BlueKeycard(s) with team " +
+                  $"keycard.prefab at {spawnPos} (keycardID='{KEYCARD_ID}').");
     }
 
     static void BuildPromptUI()

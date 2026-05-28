@@ -17,6 +17,10 @@ public class HUDBridge : MonoBehaviour
     public CombatHUD hud;
     public bool verboseLogs = false;
 
+    [Tooltip("If set (by CoopBootstrap for per-player HUD canvases), this " +
+             "Bridge binds to THIS Player instead of the first 'Player' tag.")]
+    public Transform overridePlayer;
+
     Transform           _player;
     CharacterController _cc;
 
@@ -45,14 +49,57 @@ public class HUDBridge : MonoBehaviour
         TryBindPlayer();
     }
 
+    /// <summary>
+    /// Called by CoopBootstrap after setting overridePlayer. Wipes cached
+    /// bindings so TryBindPlayer can re-run against the new player target.
+    /// </summary>
+    public void Rebind()
+    {
+        // Drop any previously-subscribed event handlers before resetting
+        if (_health != null && _healthOnDamagedField != null && _onDamagedHandler != null)
+        {
+            var current = _healthOnDamagedField.GetValue(_health) as UnityAction<float, GameObject>;
+            if (current != null) _healthOnDamagedField.SetValue(_health, current - _onDamagedHandler);
+        }
+        if (_weaponOnShootField != null && _onShootHandler != null)
+        {
+            foreach (var w in _subscribedShoot)
+            {
+                if (w == null) continue;
+                var current = _weaponOnShootField.GetValue(w) as UnityAction;
+                if (current != null) _weaponOnShootField.SetValue(w, current - _onShootHandler);
+            }
+        }
+        _subscribedShoot.Clear();
+
+        // Reset cached state so next Update / TryBindPlayer re-resolves
+        _player = null;
+        _cc = null;
+        _health = null;
+        _healthBound = false;
+        _lastActiveWeapon = null;
+        _weaponIsActive = null;
+        _weaponMaxAmmoField = null;
+        _weaponMaxAmmoProp = null;
+        _weaponGetCurrentAmmo = null;
+        _weaponNameField = null;
+        _weaponOnShootField = null;
+
+        if (hud == null) hud = Object.FindFirstObjectByType<CombatHUD>();
+        TryBindPlayer();
+    }
+
     void TryBindPlayer()
     {
         if (_player != null) return;
 
         GameObject p = null;
 
+        // 0) Co-op override — CoopBootstrap assigns this for per-player HUDs.
+        if (overridePlayer != null) p = overridePlayer.gameObject;
+
         // 1) Try the "Player" tag
-        try { p = GameObject.FindGameObjectWithTag("Player"); } catch { }
+        if (p == null) try { p = GameObject.FindGameObjectWithTag("Player"); } catch { }
 
         // 2) Fall back to any GameObject with PlayerWeaponsManager
         if (p == null)

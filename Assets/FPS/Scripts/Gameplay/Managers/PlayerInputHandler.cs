@@ -35,6 +35,12 @@ namespace Unity.FPS.Gameplay
         private InputAction m_ReloadAction;
         private InputAction m_NextWeaponAction;
 
+        // ── PATCHED (Ammar): per-player InputActions for split-screen co-op.
+        //    When set (by CoopBootstrap), this PlayerInputHandler reads its
+        //    actions from `overrideActions` instead of the global singleton.
+        //    Lets P1 and P2 each have their own device-bound input map.
+        public InputActionAsset overrideActions;
+
         void Start()
         {
             m_PlayerCharacterController = GetComponent<PlayerCharacterController>();
@@ -46,15 +52,18 @@ namespace Unity.FPS.Gameplay
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
 
-            m_MoveAction = InputSystem.actions.FindAction("Player/Move");
-            m_LookAction = InputSystem.actions.FindAction("Player/Look");
-            m_JumpAction = InputSystem.actions.FindAction("Player/Jump");
-            m_FireAction = InputSystem.actions.FindAction("Player/Fire");
-            m_AimAction = InputSystem.actions.FindAction("Player/Aim");
-            m_SprintAction = InputSystem.actions.FindAction("Player/Sprint");
-            m_CrouchAction = InputSystem.actions.FindAction("Player/Crouch");
-            m_ReloadAction = InputSystem.actions.FindAction("Player/Reload");
-            m_NextWeaponAction = InputSystem.actions.FindAction("Player/NextWeapon");
+            // ── PATCHED (Ammar): pick the action source. Co-op players get a
+            //    per-instance asset; single-player keeps using the global one.
+            var src = overrideActions != null ? overrideActions : InputSystem.actions;
+            m_MoveAction = src.FindAction("Player/Move");
+            m_LookAction = src.FindAction("Player/Look");
+            m_JumpAction = src.FindAction("Player/Jump");
+            m_FireAction = src.FindAction("Player/Fire");
+            m_AimAction = src.FindAction("Player/Aim");
+            m_SprintAction = src.FindAction("Player/Sprint");
+            m_CrouchAction = src.FindAction("Player/Crouch");
+            m_ReloadAction = src.FindAction("Player/Reload");
+            m_NextWeaponAction = src.FindAction("Player/NextWeapon");
             
             m_MoveAction.Enable();
             m_LookAction.Enable();
@@ -314,6 +323,11 @@ namespace Unity.FPS.Gameplay
 
         public int GetSelectWeaponInput()
         {
+            // ── PATCHED (Ammar): in co-op, only the KBM player (= no
+            //    overrideActions) reads digit-key weapon select. P2 uses
+            //    NextWeapon (D-pad up/down) to cycle instead.
+            if (overrideActions != null) return 0;
+
             if (CanProcessInput())
             {
                 if (Keyboard.current.digit1Key.wasPressedThisFrame)

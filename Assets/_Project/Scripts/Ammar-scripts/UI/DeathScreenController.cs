@@ -56,7 +56,7 @@ public class DeathScreenController : MonoBehaviour
 
         // Wipe THIS level only — leaves other levels' progress alone
         SaveSystem.ResetForLevel(scene);
-        SceneManager.LoadScene(scene);
+        LoadingScreen.Load(scene);
     }
 
     // Scene names that are NEVER a valid Play Again target — picking these
@@ -81,6 +81,6 @@ public class DeathScreenController : MonoBehaviour
     public void OnMainMenu()
     {
         SaveSystem.ContinueRequested = false;
-        SceneManager.LoadScene("MainMenu");
+        LoadingScreen.Load("MainMenu");
     }
 }

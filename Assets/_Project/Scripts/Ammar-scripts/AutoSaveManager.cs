@@ -335,6 +335,7 @@ public class AutoSaveManager : MonoBehaviour
     {
         try
         {
+            // Only the currently-active weapon — other weapons keep their own values
             foreach (var c in p.GetComponentsInChildren<Component>(true))
             {
                 if (c == null || c.GetType().Name != "WeaponController") continue;
@@ -343,24 +344,33 @@ public class AutoSaveManager : MonoBehaviour
                 if (m != null) return (int)m.Invoke(c, null);
             }
         } catch { }
-        return 30;
+        return -1; // sentinel — "no save"
     }
 
     static void WriteCurrentAmmo(GameObject p, int ammo)
     {
+        if (ammo < 0) return; // nothing saved → don't touch anything
         try
         {
+            // Only restore to the active weapon, and clamp to that weapon's MaxAmmo so
+            // a saved value from the AK doesn't blow up the M1911's display (30/7).
             foreach (var c in p.GetComponentsInChildren<Component>(true))
             {
                 if (c == null || c.GetType().Name != "WeaponController") continue;
                 if (!c.gameObject.activeSelf) continue;
+
+                var maxField = c.GetType().GetField("MaxAmmo");
+                int max = maxField != null ? (int)maxField.GetValue(c) : ammo;
+                int clamped = Mathf.Clamp(ammo, 0, max);
+
                 var field = c.GetType().GetField("m_CurrentAmmo",
                     BindingFlags.NonPublic | BindingFlags.Instance);
                 if (field != null)
                 {
-                    field.SetValue(c, (float)ammo);
-                    Debug.Log("[AutoSave] Restored ammo on " + c.gameObject.name + " → " + ammo);
+                    field.SetValue(c, (float)clamped);
+                    Debug.Log($"[AutoSave] Restored ammo on {c.gameObject.name} → {clamped} (max {max})");
                 }
+                return; // only the active weapon
             }
         } catch { }
     }

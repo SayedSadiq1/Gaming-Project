@@ -421,8 +421,17 @@ public static class PauseMenuBuilder
         haRT.offsetMin = new Vector2(6, 0); haRT.offsetMax = new Vector2(-6, 0);
 
         var handle = NewImage("Handle", handleArea.transform, C_WHITE);
+        handle.raycastTarget = true;   // CRITICAL — without this you can't drag the handle
         var hRT = handle.rectTransform;
+        // Slider expects the handle to be a single point that it lerps along the x-axis.
+        hRT.anchorMin = new Vector2(0.5f, 0f);
+        hRT.anchorMax = new Vector2(0.5f, 1f);
+        hRT.pivot     = new Vector2(0.5f, 0.5f);
         hRT.sizeDelta = new Vector2(16, 26);
+        hRT.anchoredPosition = Vector2.zero;
+
+        // Background image needs raycast so clicking the track jumps the handle
+        bg.raycastTarget = true;
 
         // Slider component
         var slider = sliderGO.AddComponent<Slider>();

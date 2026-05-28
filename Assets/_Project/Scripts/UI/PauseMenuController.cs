@@ -164,7 +164,7 @@ public class PauseMenuController : MonoBehaviour
     public void OnRestart()
     {
         CleanUpBeforeTransition();
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        LoadingScreen.Load(SceneManager.GetActiveScene().buildIndex);
     }
 
     /// <summary>
@@ -174,7 +174,7 @@ public class PauseMenuController : MonoBehaviour
     public void OnMainMenu()
     {
         CleanUpBeforeTransition();
-        SceneManager.LoadScene(mainMenuSceneName);
+        LoadingScreen.Load(mainMenuSceneName);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

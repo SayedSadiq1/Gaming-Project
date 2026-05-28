@@ -53,6 +53,15 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
     [Tooltip("If true, the alarm KEEPS PLAYING after this server is hacked. Only the ExitGatePanel (or a manual ServerHack.StopAllAlarmsForExit call) can silence it. Used for Server 3.")]
     public bool      keepAlarmUntilExit = false;
 
+    [Header("Hacked Background Music (Server 3)")]
+    [Tooltip("Music clip that fades in when this server is successfully hacked. Designed to play under the alarm as background tension music. Leave empty to disable.")]
+    public AudioClip hackedMusic;
+    [Range(0f, 1f)] public float hackedMusicVolume = 0.2f;
+    [Tooltip("Seconds to fade the music from 0 → target volume.")]
+    public float    hackedMusicFadeIn = 2f;
+    [Tooltip("If true, the music keeps playing even after the alarm is silenced (until the scene ends). Recommended ON for the escape sequence.")]
+    public bool     hackedMusicPersists = true;
+
     [Header("Enemy Spawner Signal")]
     [Tooltip("When the alarm fires (first failed attempt), broadcast this signal so any EnemySpawner with matching signalName starts spawning waves.")]
     public string spawnerSignalOnAlarm = "";
@@ -81,6 +90,7 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
 
     bool _hacked;
     AudioSource _alarmLoopSource;   // child of the Player while alarm is active
+    static AudioSource _hackedMusicSource;  // 2D background music after Server 3 hack
     static readonly HashSet<int> _hackedIds = new HashSet<int>();
 
     public static int  HackedCount => _hackedIds.Count;
@@ -243,6 +253,8 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
                 PlayClip(hackFailSound);
                 PlayClip(alarmSound);
                 StartAlarmLoop();
+                // Background music starts WITH the alarm (so the player hears both together).
+                if (hackedMusic != null) StartHackedMusicFadeIn();
                 // Broadcast to any EnemySpawner listening — kicks off the reinforcement waves.
                 if (!string.IsNullOrEmpty(spawnerSignalOnAlarm))
                 {
@@ -322,6 +334,16 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
         if (!keepAlarmUntilExit) StopAlarmLoop();
         else Debug.Log($"[ServerHack] Server {serverId} hacked — alarm KEPT ALIVE until exit (keepAlarmUntilExit=true).");
 
+        // Server 3 → fade in background music under the alarm
+        if (hackedMusic != null)
+        {
+            StartHackedMusicFadeIn();
+        }
+        else
+        {
+            Debug.Log($"[ServerHack] Server {serverId} hacked but no Hacked Music assigned — assign the MP3 in the inspector on this ServerHack component if you want background music.");
+        }
+
         var hud = Object.FindFirstObjectByType<CombatHUD>();
         if (hud != null) hud.IncrementObjective();
 
@@ -384,6 +406,81 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
         _alarmLoopSource.playOnAwake = false;
         _alarmLoopSource.Play();
         Debug.Log("[ServerHack] Alarm loop started on player.");
+    }
+
+    // Auto-stop the background music whenever we leave Level-3 (main menu,
+    // next level, restart, death screen, etc.). Wired up at game start so it
+    // always runs — independent of any specific ServerHack instance lifetime.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void HookSceneCleanup()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnAnySceneLoaded;
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnAnySceneLoaded;
+    }
+
+    static void OnAnySceneLoaded(UnityEngine.SceneManagement.Scene scene,
+                                  UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        // If we just loaded a scene that isn't Level-3, kill the hacked music.
+        if (scene.name != "Level-3" && scene.name != "Level3")
+        {
+            if (_hackedMusicSource != null)
+            {
+                StopHackedMusic();
+                Debug.Log($"[ServerHack] Left Level-3 (now in '{scene.name}') — background music stopped.");
+            }
+            // Also clear the hacked-server tracking so a fresh run resets state.
+            _hackedIds.Clear();
+        }
+    }
+
+    // ── Background music (faded in when Server 3 is hacked) ────────────────
+    void StartHackedMusicFadeIn()
+    {
+        // Clean up any stale reference (e.g., from a previous Play session in the editor)
+        if (_hackedMusicSource != null)
+        {
+            try { if (_hackedMusicSource.isPlaying) return; } catch { _hackedMusicSource = null; }
+        }
+
+        var host = new GameObject("ServerHack_BackgroundMusic");
+        if (hackedMusicPersists) Object.DontDestroyOnLoad(host);
+
+        _hackedMusicSource = host.AddComponent<AudioSource>();
+        _hackedMusicSource.clip         = hackedMusic;
+        _hackedMusicSource.loop         = true;
+        _hackedMusicSource.spatialBlend = 0f;       // 2D
+        _hackedMusicSource.volume       = 0f;
+        _hackedMusicSource.playOnAwake  = false;
+        _hackedMusicSource.outputAudioMixerGroup = null; // ensure no muted mixer routing
+        _hackedMusicSource.bypassEffects  = true;
+        _hackedMusicSource.bypassListenerEffects = true;
+        _hackedMusicSource.ignoreListenerPause   = true;
+        _hackedMusicSource.Play();
+
+        StartCoroutine(FadeMusicIn(_hackedMusicSource, hackedMusicVolume, hackedMusicFadeIn));
+        Debug.Log($"[ServerHack] ✓ Background music STARTED — clip='{hackedMusic.name}', target {hackedMusicVolume:0.00}, fade {hackedMusicFadeIn:0.0}s, isPlaying={_hackedMusicSource.isPlaying}");
+    }
+
+    System.Collections.IEnumerator FadeMusicIn(AudioSource src, float target, float duration)
+    {
+        if (duration <= 0f) { src.volume = target; yield break; }
+        float t = 0f;
+        while (t < duration && src != null)
+        {
+            t += Time.unscaledDeltaTime;
+            src.volume = Mathf.Lerp(0f, target, t / duration);
+            yield return null;
+        }
+        if (src != null) src.volume = target;
+    }
+
+    public static void StopHackedMusic()
+    {
+        if (_hackedMusicSource == null) return;
+        _hackedMusicSource.Stop();
+        Destroy(_hackedMusicSource.gameObject);
+        _hackedMusicSource = null;
     }
 
     void StopAlarmLoop()

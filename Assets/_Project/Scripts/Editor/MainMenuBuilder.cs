@@ -55,7 +55,7 @@ public static class MainMenuBuilder
 
         // Main panel + buttons
         var mainPanel = BuildMainPanel(canvas.transform,
-            out Button btnContinue, out Button btnPlay, out Button btnSettings,
+            out Button btnContinue, out Button btnPlay, out Button btnCoop, out Button btnSettings,
             out Button btnCredits, out Button btnQuit);
 
         // Controller (created BEFORE sub-panels so back-buttons can wire to it)
@@ -63,6 +63,8 @@ public static class MainMenuBuilder
         s_ctrl = ctrlGO.AddComponent<MainMenuController>();
         s_ctrl.mainPanel       = mainPanel;
         s_ctrl.continueButton  = btnContinue;
+        s_ctrl.coopToggleButton = btnCoop;
+        s_ctrl.coopToggleLabel  = btnCoop.GetComponentInChildren<TextMeshProUGUI>();
         s_ctrl.level1SceneName = "Level1";
 
         var settingsPanel = BuildSettingsPanel(canvas.transform);
@@ -79,6 +81,7 @@ public static class MainMenuBuilder
         // PERSISTENT listeners — runtime AddListener is wiped on scene save
         UnityEventTools.AddPersistentListener(btnContinue.onClick, s_ctrl.OnContinue);
         UnityEventTools.AddPersistentListener(btnPlay.onClick,     s_ctrl.OnPlay);
+        UnityEventTools.AddPersistentListener(btnCoop.onClick,     s_ctrl.OnToggleCoop);
         UnityEventTools.AddPersistentListener(btnSettings.onClick, s_ctrl.OnSettings);
         UnityEventTools.AddPersistentListener(btnCredits.onClick,  s_ctrl.OnCredits);
         UnityEventTools.AddPersistentListener(btnQuit.onClick,     s_ctrl.OnQuit);
@@ -136,6 +139,20 @@ public static class MainMenuBuilder
         music = musicGO.AddComponent<AudioSource>();
         music.playOnAwake = false; music.loop = true; music.volume = 0f;
         musicGO.AddComponent<MainMenuMusic>().source = music;
+
+        // Auto-wire the menu music clip if present
+        const string MENU_MUSIC_PATH = "Assets/_Project/Audio/Black Ops 2 Soundtrack Adrenaline - 128.MP3";
+        var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(MENU_MUSIC_PATH);
+        if (clip != null)
+        {
+            music.clip = clip;
+            Debug.Log($"[MainMenuBuilder] Main-menu music wired: {clip.name}");
+        }
+        else
+        {
+            Debug.LogWarning($"[MainMenuBuilder] Menu music clip not found at '{MENU_MUSIC_PATH}'. " +
+                             "Drag a clip into the Music GameObject's AudioSource manually.");
+        }
 
         var sfxGO = new GameObject("SFX");
         sfx = sfxGO.AddComponent<AudioSource>();
@@ -233,10 +250,10 @@ public static class MainMenuBuilder
         sub.alignment = TextAlignmentOptions.Left;
     }
 
-    // ── MAIN PANEL  (5 buttons: Continue / New Game / Settings / Credits / Quit) ──
+    // ── MAIN PANEL  (6 buttons: Continue / New Game / Co-op toggle / Settings / Credits / Quit) ──
     static GameObject BuildMainPanel(Transform parent,
-        out Button btnContinue, out Button btnPlay, out Button btnSettings,
-        out Button btnCredits, out Button btnQuit)
+        out Button btnContinue, out Button btnPlay, out Button btnCoop,
+        out Button btnSettings, out Button btnCredits, out Button btnQuit)
     {
         var panel = new GameObject("MainPanel", typeof(RectTransform));
         panel.transform.SetParent(parent, false);
@@ -245,7 +262,7 @@ public static class MainMenuBuilder
         rt.anchorMax = new Vector2(0, 0.5f);
         rt.pivot     = new Vector2(0, 0.5f);
         rt.anchoredPosition = new Vector2(120, -80);
-        rt.sizeDelta        = new Vector2(440, 460);
+        rt.sizeDelta        = new Vector2(440, 540);
 
         var vlg = panel.AddComponent<VerticalLayoutGroup>();
         vlg.spacing = 14;
@@ -256,6 +273,8 @@ public static class MainMenuBuilder
 
         btnContinue = NewMenuButton(panel.transform, "CONTINUE");
         btnPlay     = NewMenuButton(panel.transform, "NEW GAME");
+        // Co-op toggle — label auto-updates to "CO-OP: ON/OFF" via controller
+        btnCoop     = NewMenuButton(panel.transform, "CO-OP: OFF");
         btnSettings = NewMenuButton(panel.transform, "SETTINGS");
         btnCredits  = NewMenuButton(panel.transform, "CREDITS");
         btnQuit     = NewMenuButton(panel.transform, "QUIT");
@@ -456,10 +475,11 @@ public static class MainMenuBuilder
         ctrl.AddRow(action, btn, keyLabel);
     }
 
-    // ── CREDITS PANEL ─────────────────────────────────────────────────────
+    // ── CREDITS PANEL (scrollable) ────────────────────────────────────────
     static GameObject BuildCreditsPanel(Transform parent)
     {
-        var panel = NewPanel("CreditsPanel", parent, new Vector2(720, 620));
+        // Slightly taller panel
+        var panel = NewPanel("CreditsPanel", parent, new Vector2(740, 700));
 
         var head = NewText("Header", panel.transform, "CREDITS", 48, C_CYAN);
         head.fontStyle = FontStyles.Bold;
@@ -476,28 +496,108 @@ public static class MainMenuBuilder
             "<b><color=#00C8FF>FACILITY BREACH</color></b>\n" +
             "<size=20>Y3S2 Game Development Project</size>\n\n" +
             "<b><color=#00C8FF>LEVEL CREATORS</color></b>\n" +
-            "Level 1     Ali Manaf\n" +
-            "Level 2     <color=#888888>(Available)</color>\n" +
+            "Level 1     Sayed Sadiq\n" +
+            "Level 2     Nasser Jaffer\n" +
             "Level 3     Ammar Rabeea\n" +
             "Level 4     Sayed Hussain\n" +
-            "Level 5     Sayed Sadiq\n\n" +
+            "Level 5     Ali Manaf\n\n" +
             "<b><color=#00C8FF>ASSETS</color></b>\n" +
             "FPS Microgame — Unity Technologies\n" +
             "Low Poly Weapons VOL.1\n" +
+            "Low Poly Soldiers Demo\n" +
             "Military Base Pack — Tiny Teacup Studio\n" +
             "HQ Rocks\n" +
             "Low Poly Insurgent — ArtStore3D\n" +
-            "TextMesh Pro";
+            "Aegis Grenades System\n" +
+            "TextMesh Pro — Unity\n" +
+            "AI Navigation — Unity\n" +
+            "ProBuilder — Unity\n" +
+            "glTFast — Unity\n\n" +
+            "<b><color=#00C8FF>MUSIC</color></b>\n" +
+            "Black Ops 2 Soundtrack — Adrenaline";
 
-        var txt = NewText("CreditsBody", panel.transform, body, 22, C_WHITE);
-        var rt = txt.rectTransform;
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot     = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = new Vector2(0, 30);
-        rt.sizeDelta        = new Vector2(620, 460);
+        // ── ScrollRect setup (Unity standard pattern) ──
+        //  Panel → Viewport (RectMask2D) → Content (VerticalLayoutGroup +
+        //  ContentSizeFitter) → CreditsBody text. The layout group + fitter
+        //  compute content height from the text's preferred size so the
+        //  scrollbar handle sizes correctly.
+
+        // Viewport
+        var viewportGO = new GameObject("Viewport", typeof(RectTransform));
+        viewportGO.transform.SetParent(panel.transform, false);
+        var viewRT = viewportGO.GetComponent<RectTransform>();
+        viewRT.anchorMin = new Vector2(0, 0);
+        viewRT.anchorMax = new Vector2(1, 1);
+        viewRT.offsetMin = new Vector2(30, 110);   // bottom — leave room for BACK
+        viewRT.offsetMax = new Vector2(-30, -100); // top — leave room for header
+        viewportGO.AddComponent<RectMask2D>();
+
+        // Content
+        var contentGO = new GameObject("Content", typeof(RectTransform));
+        contentGO.transform.SetParent(viewportGO.transform, false);
+        var contentRT = contentGO.GetComponent<RectTransform>();
+        contentRT.anchorMin = new Vector2(0, 1);
+        contentRT.anchorMax = new Vector2(1, 1);
+        contentRT.pivot     = new Vector2(0.5f, 1);
+        contentRT.anchoredPosition = Vector2.zero;
+        contentRT.sizeDelta = new Vector2(0, 0);     // will be resized by ContentSizeFitter
+
+        var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
+        vlg.childAlignment       = TextAnchor.UpperCenter;
+        vlg.childForceExpandWidth  = true;
+        vlg.childForceExpandHeight = false;
+        vlg.childControlWidth      = true;
+        vlg.childControlHeight     = true;
+        vlg.padding = new RectOffset(0, 0, 10, 10);
+
+        var fitter = contentGO.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        // Body text — let the layout group control its size, no manual rect
+        var txt = NewText("CreditsBody", contentGO.transform, body, 22, C_WHITE);
         txt.alignment   = TextAlignmentOptions.Top;
         txt.lineSpacing = 6;
+
+        // ScrollRect on the panel itself
+        var scroll = panel.AddComponent<ScrollRect>();
+        scroll.viewport             = viewRT;
+        scroll.content              = contentRT;
+        scroll.horizontal           = false;
+        scroll.vertical             = true;
+        scroll.movementType         = ScrollRect.MovementType.Elastic;
+        scroll.scrollSensitivity    = 25f;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+
+        // Slim cyan scrollbar on the right edge (Sliding Area → Handle is the
+        // Unity-required hierarchy — without Sliding Area the handle fills the bar).
+        var scrollbarGO = new GameObject("Scrollbar", typeof(RectTransform));
+        scrollbarGO.transform.SetParent(panel.transform, false);
+        var sbRT = scrollbarGO.GetComponent<RectTransform>();
+        sbRT.anchorMin = new Vector2(1, 0); sbRT.anchorMax = new Vector2(1, 1);
+        sbRT.pivot     = new Vector2(1, 0.5f);
+        sbRT.offsetMin = new Vector2(-12, 110);
+        sbRT.offsetMax = new Vector2(-6,  -100);
+        var sbBg = scrollbarGO.AddComponent<Image>();
+        sbBg.color = new Color(1, 1, 1, 0.08f);
+        var sb = scrollbarGO.AddComponent<Scrollbar>();
+        sb.direction = Scrollbar.Direction.BottomToTop;
+
+        var slidingArea = new GameObject("Sliding Area", typeof(RectTransform));
+        slidingArea.transform.SetParent(scrollbarGO.transform, false);
+        var saRT = slidingArea.GetComponent<RectTransform>();
+        saRT.anchorMin = Vector2.zero; saRT.anchorMax = Vector2.one;
+        saRT.offsetMin = new Vector2(2, 2); saRT.offsetMax = new Vector2(-2, -2);
+
+        var handleGO = new GameObject("Handle", typeof(RectTransform));
+        handleGO.transform.SetParent(slidingArea.transform, false);
+        var hRT = handleGO.GetComponent<RectTransform>();
+        hRT.anchorMin = Vector2.zero; hRT.anchorMax = Vector2.one;
+        hRT.offsetMin = Vector2.zero; hRT.offsetMax = Vector2.zero;
+        var handleImg = handleGO.AddComponent<Image>();
+        handleImg.color = C_CYAN;
+        sb.targetGraphic = handleImg;
+        sb.handleRect    = hRT;
+        scroll.verticalScrollbar = sb;
 
         var back = NewMenuButton(panel.transform, "BACK");
         ConfigBottomBtn(back.GetComponent<RectTransform>(), 0, 30, new Vector2(280, 60));
@@ -602,8 +702,14 @@ public static class MainMenuBuilder
         haRT.offsetMin = new Vector2(8, 0); haRT.offsetMax = new Vector2(-8, 0);
 
         var handle = NewImage("Handle", handleArea.transform, C_WHITE);
+        handle.raycastTarget = true;
         var hRT = handle.rectTransform;
+        hRT.anchorMin = new Vector2(0.5f, 0f);
+        hRT.anchorMax = new Vector2(0.5f, 1f);
+        hRT.pivot     = new Vector2(0.5f, 0.5f);
         hRT.sizeDelta = new Vector2(18, 28);
+        hRT.anchoredPosition = Vector2.zero;
+        bg.raycastTarget = true;
 
         var slider = sliderGO.AddComponent<Slider>();
         slider.fillRect      = fill.rectTransform;

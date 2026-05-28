@@ -39,6 +39,6 @@ public class LevelExit : MonoBehaviour
         Debug.Log("[LevelExit] All objectives complete. Loading: " + nextSceneName);
 
         if (!string.IsNullOrEmpty(nextSceneName))
-            SceneManager.LoadScene(nextSceneName);
+            LoadingScreen.Load(nextSceneName);
     }
 }
