@@ -13,6 +13,9 @@ public class SecurityPanel : MonoBehaviour
     public float interactDistance = 2.5f;
     public string panelLabel = "PANEL A";
 
+    [Tooltip("The SecurityLockdown manager — panel can only be deactivated while lockdown is active.")]
+    public SecurityLockdown lockdownManager;
+
     [Header("Labels")]
     public string labelActive      = "Press [E] to deactivate panel";
     public string labelDeactivated = "Panel offline";
@@ -47,7 +50,8 @@ public class SecurityPanel : MonoBehaviour
         Vector2 playerXZ = new Vector2(_player.position.x,   _player.position.z);
         _playerInRange   = Vector2.Distance(myXZ, playerXZ) <= interactDistance;
 
-        if (_playerInRange && Keyboard.current != null && Keyboard.current[Key.E].wasPressedThisFrame)
+        bool lockdownActive = lockdownManager != null && lockdownManager.IsLockedDown;
+        if (_playerInRange && lockdownActive && Keyboard.current != null && Keyboard.current[Key.E].wasPressedThisFrame)
             Deactivate();
     }
 
@@ -69,6 +73,9 @@ public class SecurityPanel : MonoBehaviour
     {
         if (!_playerInRange) return;
 
+        bool lockdownActive = lockdownManager != null && lockdownManager.IsLockedDown;
+        if (!lockdownActive && !IsDeactivated) return;
+
         string msg   = IsDeactivated ? labelDeactivated : labelActive;
         Color  color = IsDeactivated
             ? new Color(0f, 1f, 0.55f, 1f)   // green — deactivated
@@ -76,13 +83,14 @@ public class SecurityPanel : MonoBehaviour
 
         GUIStyle style = new GUIStyle(GUI.skin.box)
         {
-            fontSize  = 20,
+            fontSize  = 17,
             alignment = TextAnchor.MiddleCenter,
             fontStyle = FontStyle.Bold,
+            wordWrap  = false,
         };
         style.normal.textColor = color;
 
-        float w = 340f, h = 44f;
+        float w = 460f, h = 44f;
         GUI.Box(new Rect((Screen.width - w) * 0.5f, Screen.height * 0.72f, w, h),
             $"[{panelLabel}]  {msg}", style);
     }

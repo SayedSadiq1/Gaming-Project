@@ -25,26 +25,28 @@ public class Level1ObjectiveManager : MonoBehaviour
     [Tooltip("The electricity source that powers the main exit gate.")]
     public ElectricitySource mainGateGenerator;
 
-    // ── Objective 3 ──────────────────────────────────────────────────────────
-    [Header("Objective 3  (shown after Objective 2 completes)")]
-    public string obj3Title = "REACH THE EXIT";
-    [TextArea(2, 4)]
-    public string obj3Description = "Make your way to the main exit gate and get out.";
-
-    // ── Objective 3b — lockdown phase (auto-shown when alarm triggers) ────────
+    // ── Objective 3 — lockdown phase (auto-shown when keycard picked up) ─────
     [Header("Objective 3  —  Lockdown phase")]
-    public string obj3LockdownTitle = "DISABLE SECURITY LOCKDOWN";
+    public string obj3Title = "DISABLE SECURITY LOCKDOWN";
     [TextArea(2, 4)]
-    public string obj3LockdownDescription = "Security systems have been triggered. Locate and shut down both control panels to restore access.";
+    public string obj3Description = "Security systems have been triggered. Locate and shut down both control panels to restore access.";
     [Tooltip("The SecurityLockdown manager in the scene.")]
     public SecurityLockdown securityLockdown;
+
+    // ── Objective 4 ──────────────────────────────────────────────────────────
+    [Header("Objective 4  (shown after lockdown cleared)")]
+    public string obj4Title = "REACH THE EXIT";
+    [TextArea(2, 4)]
+    public string obj4Description = "Lockdown lifted. Make your way to the main exit gate and get out.";
+    [Tooltip("The exit gate door — completing this objective finishes the level.")]
+    public ChainDoorController exitGate;
 
     // ── HUD ──────────────────────────────────────────────────────────────────
     [Header("HUD")]
     [Tooltip("Auto-found if left empty.")]
     public CombatHUD combatHUD;
     [Tooltip("Total objectives in Level 1 (used for the HUD counter).")]
-    public int totalObjectives = 3;
+    public int totalObjectives = 4;  // must match the number of objectives wired up
 
     // ── Style ─────────────────────────────────────────────────────────────────
     [Header("Style")]
@@ -58,6 +60,7 @@ public class Level1ObjectiveManager : MonoBehaviour
     bool _obj1Done;
     bool _obj2Done;
     bool _obj3Done;
+    bool _obj4Done;
     bool _inLockdown;
 
     Coroutine _panelCoroutine;
@@ -86,6 +89,9 @@ public class Level1ObjectiveManager : MonoBehaviour
             securityLockdown.OnLockdownLifted    += OnLockdownCleared;
         }
 
+        if (exitGate != null)
+            exitGate.OnOpened += OnExitGateOpened;
+
         BuildUI();
         ShowObjective(obj1Title, obj1Description, accentColor);
         RefreshProgress();
@@ -98,6 +104,8 @@ public class Level1ObjectiveManager : MonoBehaviour
             securityLockdown.OnLockdownTriggered -= OnLockdownStarted;
             securityLockdown.OnLockdownLifted    -= OnLockdownCleared;
         }
+        if (exitGate != null)
+            exitGate.OnOpened -= OnExitGateOpened;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -208,7 +216,7 @@ public class Level1ObjectiveManager : MonoBehaviour
     IEnumerator LockdownStartSequence()
     {
         _panelGroup.alpha = 0f;
-        ShowObjective(obj3LockdownTitle, obj3LockdownDescription, alarmColor);
+        ShowObjective(obj3Title, obj3Description, alarmColor);
         _progressText.text = "";
         yield return StartCoroutine(FadeGroup(_panelGroup, 0f, 1f, 0.25f));
 
@@ -234,7 +242,32 @@ public class Level1ObjectiveManager : MonoBehaviour
         yield return new WaitForSeconds(2.5f);
         yield return StartCoroutine(FadeGroup(_notifGroup, 1f, 0f, 0.5f));
 
-        // Hide the panel — all objectives done.
+        yield return StartCoroutine(FadeGroup(_panelGroup, 1f, 0f, 0.4f));
+        ShowObjective(obj4Title, obj4Description, accentColor);
+        _progressText.text = "";
+        yield return StartCoroutine(FadeGroup(_panelGroup, 0f, 1f, 0.4f));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //  OBJECTIVE 4 — reach the exit
+    // ─────────────────────────────────────────────────────────────────────────
+    void OnExitGateOpened()
+    {
+        if (_obj4Done) return;
+        _obj4Done = true;
+        RunPanelSequence(Obj4CompleteSequence());
+    }
+
+    IEnumerator Obj4CompleteSequence()
+    {
+        combatHUD?.IncrementObjective();
+
+        ShowNotification("✓  OBJECTIVE COMPLETE", completeColor);
+        yield return StartCoroutine(FadeGroup(_notifGroup, 0f, 1f, 0.3f));
+        yield return new WaitForSeconds(2.5f);
+        yield return StartCoroutine(FadeGroup(_notifGroup, 1f, 0f, 0.5f));
+
+        // All objectives done — hide the panel.
         yield return StartCoroutine(FadeGroup(_panelGroup, 1f, 0f, 0.6f));
     }
 

@@ -147,13 +147,14 @@ public class ChainDoorController : MonoBehaviour
 
         GUIStyle style = new GUIStyle(GUI.skin.box)
         {
-            fontSize   = 20,
+            fontSize   = 17,
             alignment  = TextAnchor.MiddleCenter,
-            fontStyle  = FontStyle.Bold
+            fontStyle  = FontStyle.Bold,
+            wordWrap   = false,
         };
         style.normal.textColor = textColor;
 
-        float w = 280f, h = 44f;
+        float w = 460f, h = 44f;
         GUI.Box(new Rect((Screen.width - w) * 0.5f, Screen.height * 0.72f, w, h), msg, style);
     }
 }

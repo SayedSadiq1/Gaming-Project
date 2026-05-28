@@ -19,13 +19,14 @@ public class Level1MissionCompleteHook : MonoBehaviour
     [Tooltip("Scene to load when NEXT LEVEL is clicked.")]
     public string nextSceneName = "Level2";
 
-    [Tooltip("Seconds to wait after Objective 3 completes before showing the Mission Complete screen.")]
+    [Tooltip("Seconds to wait after Objective 4 completes before showing the Mission Complete screen.")]
     public float delayBeforeShow = 3.5f;
 
     [Tooltip("Path to the alarm clip that should replace Sayed's. Loaded via Resources/AssetDatabase fallback.")]
     public string alarmClipResourcePath = "SFX/Server3Alarm";
 
     SecurityLockdown _lockdown;
+    ChainDoorController _exitGate;
     bool _shown;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -48,24 +49,31 @@ public class Level1MissionCompleteHook : MonoBehaviour
     void Start()
     {
         _lockdown = Object.FindFirstObjectByType<SecurityLockdown>(FindObjectsInactive.Include);
-
         if (_lockdown != null)
-        {
-            // Replace the alarm sound with ours
             ReplaceAlarmSound();
+        else
+            Debug.LogWarning("[Level1Complete] No SecurityLockdown found in Level 1.");
 
-            _lockdown.OnLockdownLifted += OnLevelComplete;
-            Debug.Log("[Level1Complete] Hooked into SecurityLockdown.OnLockdownLifted.");
+        // Hook into the exit gate via Level1ObjectiveManager so we fire on Obj 4.
+        var objMgr = Object.FindFirstObjectByType<Level1ObjectiveManager>(FindObjectsInactive.Include);
+        if (objMgr != null && objMgr.exitGate != null)
+        {
+            _exitGate = objMgr.exitGate;
+            _exitGate.OnOpened += OnLevelComplete;
+            Debug.Log("[Level1Complete] Hooked into exit gate OnOpened (Objective 4).");
         }
         else
         {
-            Debug.LogWarning("[Level1Complete] No SecurityLockdown found in Level 1.");
+            Debug.LogWarning("[Level1Complete] Level1ObjectiveManager or its exitGate not found — falling back to OnLockdownLifted.");
+            if (_lockdown != null)
+                _lockdown.OnLockdownLifted += OnLevelComplete;
         }
     }
 
     void OnDestroy()
     {
-        if (_lockdown != null) _lockdown.OnLockdownLifted -= OnLevelComplete;
+        if (_exitGate != null) _exitGate.OnOpened -= OnLevelComplete;
+        if (_lockdown  != null) _lockdown.OnLockdownLifted -= OnLevelComplete;
     }
 
     void ReplaceAlarmSound()
@@ -128,7 +136,7 @@ public class Level1MissionCompleteHook : MonoBehaviour
         if (scoreMgr != null) kills = scoreMgr.Kills;
 
         string stats =
-            "<color=#00C8FF>OBJECTIVES</color>\n3 / 3 COMPLETE\n\n" +
+            "<color=#00C8FF>OBJECTIVES</color>\n4 / 4 COMPLETE\n\n" +
             $"<color=#00C8FF>KILLS</color>\n{kills}\n\n" +
             "<color=#00C8FF>STATUS</color>\nFACILITY GATE CLEARED";
 

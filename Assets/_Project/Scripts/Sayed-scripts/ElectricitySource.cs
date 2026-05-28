@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -11,20 +12,26 @@ public class ElectricitySource : MonoBehaviour
     public float interactDistance = 3f;
 
     [Header("Audio")]
-    [Tooltip("Played once when the source is powered on.")]
+    [Tooltip("Played first when the player starts the generator (cranking/startup noise).")]
+    public AudioClip starterSound;
+    [Tooltip("Played after the starter sound finishes — the generator running / power-on confirmation.")]
     public AudioClip powerOnSound;
 
     [Header("Labels")]
     public string labelOff = "Press [E] to start generator";
     public string labelOn  = "Generator online";
 
+    [Header("Audio Volume")]
+    [Range(0f, 1f)] public float audioVolume = 1f;
+
     public bool IsPowered { get; private set; }
 
     // Fires once when this source is powered on.
     public event Action OnPowered;
 
-    Transform _player;
-    bool      _playerInRange;
+    Transform   _player;
+    bool        _playerInRange;
+    AudioSource _loopSource;
 
     void Start()
     {
@@ -47,9 +54,26 @@ public class ElectricitySource : MonoBehaviour
     public void PowerOn()
     {
         IsPowered = true;
+        StartCoroutine(PlayStartupSounds());
         OnPowered?.Invoke();
+    }
+
+    IEnumerator PlayStartupSounds()
+    {
+        if (starterSound != null)
+        {
+            AudioSource.PlayClipAtPoint(starterSound, transform.position, audioVolume);
+            yield return new WaitForSeconds(starterSound.length);
+        }
         if (powerOnSound != null)
-            AudioSource.PlayClipAtPoint(powerOnSound, transform.position);
+        {
+            _loopSource              = gameObject.AddComponent<AudioSource>();
+            _loopSource.clip         = powerOnSound;
+            _loopSource.loop         = true;
+            _loopSource.spatialBlend = 1f;   // 3D — sound comes from the generator
+            _loopSource.volume       = audioVolume;
+            _loopSource.Play();
+        }
     }
 
     void OnGUI()
