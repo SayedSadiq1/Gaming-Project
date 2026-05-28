@@ -11,8 +11,9 @@ namespace FacilityBreach
     /// <summary>
     /// Manual reload system – attach this to the Player GameObject.
     ///
-    /// Press R → a golden ring fills over the reload time at screen centre → clip refills.
+    /// Press R → a cyan progress bar fills below the crosshair → clip refills.
     /// Each weapon can have a WeaponReloadConfig component to set its own reload speed.
+    /// Styled to match the Facility Breach HUD (cyan accent + dark track).
     /// </summary>
     public class WeaponReloader : MonoBehaviour
     {
@@ -29,8 +30,14 @@ namespace FacilityBreach
 
         // UI elements built at runtime – no prefab needed
         GameObject m_Canvas;
-        Image m_Ring;
+        Image m_BarFill;
         TextMeshProUGUI m_Label;
+
+        // Style — matches the rest of the HUD
+        static readonly Color C_CYAN     = new Color32(0x00, 0xC8, 0xFF, 0xFF);
+        static readonly Color C_CYAN_DIM = new Color(0f, 0.78f, 1f, 0.35f);
+        static readonly Color C_TRACK    = new Color(0f, 0f, 0f, 0.55f);
+        static readonly Color C_WHITE    = Color.white;
 
         // ─────────────────────────────────────────────────────────────────────
         void Start()
@@ -86,11 +93,11 @@ namespace FacilityBreach
                 }
             }
 
-            // Show UI, reset ring
-            if (m_Ring != null) m_Ring.fillAmount = 0f;
-            if (m_Canvas != null) m_Canvas.SetActive(true);
+            // Show UI, reset bar
+            if (m_BarFill != null) m_BarFill.fillAmount = 0f;
+            if (m_Canvas  != null) m_Canvas.SetActive(true);
 
-            // Animate the ring over the reload duration
+            // Animate the bar over the reload duration
             float elapsed = 0f;
             while (elapsed < duration)
             {
@@ -101,7 +108,7 @@ namespace FacilityBreach
                 }
 
                 elapsed += Time.deltaTime;
-                if (m_Ring != null) m_Ring.fillAmount = Mathf.Clamp01(elapsed / duration);
+                if (m_BarFill != null) m_BarFill.fillAmount = Mathf.Clamp01(elapsed / duration);
                 yield return null;
             }
 
@@ -121,6 +128,8 @@ namespace FacilityBreach
         }
 
         // ── Build a lightweight screen-centre overlay entirely in code ────────
+        //  Cyan progress bar matching the Facility Breach HUD style. Sits just
+        //  below the crosshair so it doesn't block the player's view.
         void BuildReloadUI()
         {
             if (m_Canvas != null) return;
@@ -130,72 +139,105 @@ namespace FacilityBreach
             m_Canvas.transform.SetParent(transform, false);
 
             Canvas canvas = m_Canvas.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 50;
 
             CanvasScaler scaler = m_Canvas.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
             m_Canvas.AddComponent<GraphicRaycaster>();
 
-            // ── White ring (radial fill) ──────────────
-            Sprite ringSprite = CreateRingSprite(128, 44, 60);
+            // Shared solid sprite — Unity Image.fillAmount won't work without
+            // a sprite assigned (it just renders nothing).
+            Sprite solid = CreateSolidSprite();
 
-            GameObject ring = new GameObject("Ring");
-            ring.transform.SetParent(m_Canvas.transform, false);
-            m_Ring             = ring.AddComponent<Image>();
-            m_Ring.sprite      = ringSprite;
-            m_Ring.color       = new Color(1f, 0.84f, 0f); // Golden yellow
-            m_Ring.type        = Image.Type.Filled;
-            m_Ring.fillMethod  = Image.FillMethod.Radial360;
-            m_Ring.fillClockwise = true;
-            m_Ring.fillOrigin  = (int)Image.Origin360.Top;
-            m_Ring.fillAmount  = 0f;
-            m_Ring.preserveAspect = true;
-            SetAnchored(ring, Vector2.zero, 120f, 120f);
+            // ── Container so the bar + label move as one ──
+            var container = new GameObject("BarContainer", typeof(RectTransform));
+            container.transform.SetParent(m_Canvas.transform, false);
+            SetAnchored(container, new Vector2(0f, -80f), 360f, 32f);
 
-            // ── "RELOADING" text label ────────────────────────────────────────
+            // ── Track (dark background) ──────────────────────────────────────
+            var trackGO = new GameObject("Track", typeof(RectTransform));
+            trackGO.transform.SetParent(container.transform, false);
+            var trackImg = trackGO.AddComponent<Image>();
+            trackImg.sprite = solid;
+            trackImg.color  = C_TRACK;
+            trackImg.raycastTarget = false;
+            var trackRT = trackGO.GetComponent<RectTransform>();
+            trackRT.anchorMin = new Vector2(0f, 0.5f);
+            trackRT.anchorMax = new Vector2(1f, 0.5f);
+            trackRT.pivot     = new Vector2(0.5f, 0.5f);
+            trackRT.sizeDelta = new Vector2(0f, 10f);
+
+            // ── Top + bottom cyan accent lines (match HUD style) ─────────────
+            AddAccent(container.transform, solid, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f),
+                      new Vector2(0f, 8f), 2f, C_CYAN);
+            AddAccent(container.transform, solid, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f),
+                      new Vector2(0f, -8f), 2f, C_CYAN_DIM);
+
+            // ── Fill (cyan) — horizontal left-to-right ───────────────────────
+            var fillGO = new GameObject("Fill", typeof(RectTransform));
+            fillGO.transform.SetParent(container.transform, false);
+            m_BarFill = fillGO.AddComponent<Image>();
+            m_BarFill.sprite        = solid;
+            m_BarFill.color         = C_CYAN;
+            m_BarFill.type          = Image.Type.Filled;
+            m_BarFill.fillMethod    = Image.FillMethod.Horizontal;
+            m_BarFill.fillOrigin    = (int)Image.OriginHorizontal.Left;
+            m_BarFill.fillAmount    = 0f;
+            m_BarFill.raycastTarget = false;
+            var fillRT = fillGO.GetComponent<RectTransform>();
+            fillRT.anchorMin = new Vector2(0f, 0.5f);
+            fillRT.anchorMax = new Vector2(1f, 0.5f);
+            fillRT.pivot     = new Vector2(0.5f, 0.5f);
+            fillRT.sizeDelta = new Vector2(0f, 10f);
+
+            // ── "RELOADING" text label ───────────────────────────────────────
             GameObject labelGO = new GameObject("Label");
             labelGO.transform.SetParent(m_Canvas.transform, false);
-            m_Label             = labelGO.AddComponent<TextMeshProUGUI>();
-            m_Label.text        = "RELOADING";
-            m_Label.fontSize    = 18f;
-            m_Label.fontStyle   = FontStyles.Bold;
-            m_Label.alignment   = TextAlignmentOptions.Center;
-            m_Label.color       = Color.white;
-            SetAnchored(labelGO, new Vector2(0f, -80f), 200f, 30f);
+            m_Label = labelGO.AddComponent<TextMeshProUGUI>();
+            m_Label.text             = "RELOADING";
+            m_Label.fontSize         = 18f;
+            m_Label.fontStyle        = FontStyles.Bold;
+            m_Label.alignment        = TextAlignmentOptions.Center;
+            m_Label.color            = C_CYAN;
+            m_Label.characterSpacing = 6f;
+            m_Label.raycastTarget    = false;
+            SetAnchored(labelGO, new Vector2(0f, -116f), 360f, 24f);
         }
 
-        static Sprite CreateRingSprite(int size, int innerRadius, int outerRadius)
+        static void AddAccent(Transform parent, Sprite solid,
+                              Vector2 anchorMin, Vector2 anchorMax,
+                              Vector2 pos, float height, Color color)
         {
-            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            tex.filterMode = FilterMode.Bilinear;
-            tex.wrapMode   = TextureWrapMode.Clamp;
+            var go = new GameObject("Accent", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var img = go.AddComponent<Image>();
+            img.sprite = solid;
+            img.color  = color;
+            img.raycastTarget = false;
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin        = anchorMin;
+            rt.anchorMax        = anchorMax;
+            rt.pivot            = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = pos;
+            rt.sizeDelta        = new Vector2(0f, height);
+        }
 
-            Color[] pixels = new Color[size * size];
-            float cx = size * 0.5f;
-            float cy = size * 0.5f;
-            float outerSq = outerRadius * outerRadius;
-            float innerSq = innerRadius * innerRadius;
-
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float dx = x - cx + 0.5f;
-                    float dy = y - cy + 0.5f;
-                    float distSq = dx * dx + dy * dy;
-
-                    if (distSq >= innerSq && distSq <= outerSq)
-                        pixels[y * size + x] = Color.white;
-                    else
-                        pixels[y * size + x] = Color.clear;
-                }
-            }
-
+        // 2x2 solid white sprite (cached on the texture so we don't leak).
+        static Sprite s_Solid;
+        static Sprite CreateSolidSprite()
+        {
+            if (s_Solid != null) return s_Solid;
+            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            var pixels = new Color[4];
+            for (int i = 0; i < 4; i++) pixels[i] = Color.white;
             tex.SetPixels(pixels);
             tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+            tex.hideFlags = HideFlags.HideAndDontSave;
+            s_Solid = Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f), 100f);
+            s_Solid.hideFlags = HideFlags.HideAndDontSave;
+            return s_Solid;
         }
 
         static void SetAnchored(GameObject go, Vector2 offset, float w, float h)

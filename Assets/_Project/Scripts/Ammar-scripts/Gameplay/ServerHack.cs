@@ -276,7 +276,15 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
             return;
         }
 
-        ActuallyHack();
+        GateWithMiniGame();
+    }
+
+    // Inserts the IP Lock-On mini-game before ActuallyHack(). Difficulty scales
+    // with serverId. Mini-game retries internally on failure (no hard fail).
+    void GateWithMiniGame()
+    {
+        Debug.Log($"[ServerHack] Server {serverId} starting hack mini-game (difficulty {serverId}).");
+        HackMiniGame.Begin(serverId, ActuallyHack);
     }
 
     // ── Password panel ─────────────────────────────────────────────────────
@@ -288,7 +296,7 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
             Debug.LogWarning("[ServerHack] No PasswordEntryUI in scene — cannot prompt for password. " +
                              "Run 'Facility Breach → Setup Level 3 Interactions' to build it.");
             // Fail-safe: skip the password gate so the level remains beatable.
-            ActuallyHack();
+            GateWithMiniGame();
             return;
         }
 
@@ -302,7 +310,7 @@ public class ServerHack : MonoBehaviour, IInteractable, IInteractableProgress
         if (success)
         {
             Debug.Log($"[ServerHack] Server {serverId} password accepted.");
-            ActuallyHack();
+            GateWithMiniGame();
         }
         else
         {
