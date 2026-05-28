@@ -56,6 +56,12 @@ public class EnemyWeaponMount : MonoBehaviour
             {
                 var ps = go.GetComponent<Unity.FPS.Gameplay.ProjectileStandard>();
                 if (ps != null) ps.Damage = damageOverride;
+
+                // The M107 sniper projectile is a PiercingSniperProjectile (Damage = 500
+                // for the player's one-shot). When an ENEMY fires it, honor the override
+                // here too, otherwise it deals the full 500 and instantly kills the player.
+                var piercing = go.GetComponent<Ammar.Facility.PiercingSniperProjectile>();
+                if (piercing != null) piercing.Damage = damageOverride;
             }
         }
 

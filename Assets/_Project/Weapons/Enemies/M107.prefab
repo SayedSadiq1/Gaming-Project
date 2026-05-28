@@ -161,7 +161,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyWeaponMount
   firePoint: {fileID: 0}
   projectilePrefab: {fileID: 1001, guid: 0d6c0fd19e924a83989c1747c92245b1, type: 3}
-  damageOverride: 20
+  damageOverride: 50
   muzzleFlashPrefab: {fileID: 0}
   muzzleFlashDuration: 0.08
   fireSound: {fileID: 8300000, guid: 8ac2dead8d75fad409ae4417f37385b1, type: 3}

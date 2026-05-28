@@ -18880,7 +18880,7 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 5283346490275222755}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1077963291
+--- !u!114 &1077963294
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -18889,15 +18889,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 1077963288}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f07570aed53274b4c9ea4dc7f12065e9, type: 3}
+  m_Script: {fileID: 11500000, guid: f965ee498e0314bf199e4ff9b17cd400, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ElectricitySource
-  interactDistance: 4
-  starterSound: {fileID: 0}
-  powerOnSound: {fileID: 0}
-  labelOff: Press [E] to start generator
-  labelOn: Generator online
-  audioVolume: 1
+  m_EditorClassIdentifier: Assembly-CSharp::ProximityPrompt
+  message: Generator is Broken !
+  triggerDistance: 3
+  accentColor: {r: 0, g: 0.78, b: 1, a: 1}
+  fadeSpeed: 10
 --- !u!1 &1081437095
 GameObject:
   m_ObjectHideFlags: 0
@@ -27476,7 +27474,7 @@ PrefabInstance:
     - target: {fileID: 3115173341297644747, guid: c14b580dcc82f4b6697ec7c423a4a8bd,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.00000020203362
+      value: 1.718
       objectReference: {fileID: 0}
     - target: {fileID: 3115173341297644747, guid: c14b580dcc82f4b6697ec7c423a4a8bd,
         type: 3}
@@ -39224,7 +39222,7 @@ PrefabInstance:
     - target: {fileID: 481024583847736453, guid: b4978227585ab42a39fdcc38a43f4dde,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.97
+      value: 1.22
       objectReference: {fileID: 0}
     - target: {fileID: 481024583847736453, guid: b4978227585ab42a39fdcc38a43f4dde,
         type: 3}
@@ -39278,7 +39276,7 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 218203382661447374, guid: b4978227585ab42a39fdcc38a43f4dde,
         type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1077963291}
+      addedObject: {fileID: 1077963294}
   m_SourcePrefab: {fileID: 100100000, guid: b4978227585ab42a39fdcc38a43f4dde, type: 3}
 --- !u!1001 &5807608516625203499
 PrefabInstance:
