@@ -25,11 +25,16 @@ public class Level1ObjectiveManager : MonoBehaviour
     [Tooltip("The electricity source that powers the main exit gate.")]
     public ElectricitySource mainGateGenerator;
 
-    // ── Objective 3 — lockdown phase (auto-shown when keycard picked up) ─────
-    [Header("Objective 3  —  Lockdown phase")]
-    public string obj3Title = "DISABLE SECURITY LOCKDOWN";
+    // ── Objective 3 ──────────────────────────────────────────────────────────
+    [Header("Objective 3  —  Initial (shown after Objective 2 completes)")]
+    public string obj3Title = "REACH THE EXIT GATE";
     [TextArea(2, 4)]
-    public string obj3Description = "Security systems have been triggered. Locate and shut down both control panels to restore access.";
+    public string obj3Description = "Power restored. Make your way to the main exit gate.";
+
+    [Header("Objective 3  —  Lockdown phase (switches when alarm triggers)")]
+    public string obj3LockdownTitle = "DISABLE SECURITY LOCKDOWN";
+    [TextArea(2, 4)]
+    public string obj3LockdownDescription = "Security systems have been triggered. Locate and shut down both control panels to restore access.";
     [Tooltip("The SecurityLockdown manager in the scene.")]
     public SecurityLockdown securityLockdown;
 
@@ -215,8 +220,9 @@ public class Level1ObjectiveManager : MonoBehaviour
 
     IEnumerator LockdownStartSequence()
     {
+        // Swap the panel text from the initial "reach exit" to the lockdown task.
         _panelGroup.alpha = 0f;
-        ShowObjective(obj3Title, obj3Description, alarmColor);
+        ShowObjective(obj3LockdownTitle, obj3LockdownDescription, alarmColor);
         _progressText.text = "";
         yield return StartCoroutine(FadeGroup(_panelGroup, 0f, 1f, 0.25f));
 
