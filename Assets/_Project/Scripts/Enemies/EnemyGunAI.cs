@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 using Unity.FPS.Game;
@@ -26,6 +27,13 @@ public class EnemyGunAI : MonoBehaviour
     public GameObject projectilePrefab;
     public float fireRate = 1f;
     public float damage = 10f;
+
+    [Header("Fire Timing")]
+    [Tooltip("Seconds to wait after the Shoot animation triggers before the bullet " +
+             "actually spawns. Lets the weapon finish raising so the muzzle clears " +
+             "cover (railings/walls) in front of the enemy. Match this to the Shoot " +
+             "transition + raise time (~0.25–0.4s for this animator).")]
+    public float fireDelay = 0.3f;
 
     private NavMeshAgent agent;
     private Animator anim;
@@ -143,6 +151,23 @@ public class EnemyGunAI : MonoBehaviour
         if (anim != null)
             anim.SetTrigger("Shoot");
 
+        // Delay the actual shot so the weapon has time to raise into the shoot pose.
+        // Firing on the same frame as the trigger spawns the bullet while the gun is
+        // still lowered/mid-transition → the muzzle is behind cover (e.g. the tower
+        // railing) and the bullet dies on it instead of reaching the player.
+        StartCoroutine(FireAfterDelay(fireDelay));
+    }
+
+    IEnumerator FireAfterDelay(float delay)
+    {
+        if (delay > 0f)
+            yield return new WaitForSeconds(delay);
+
+        // Target may have died / been cleared during the wind-up.
+        if (target == null) yield break;
+
+        // Recompute aim at fire time so a moving player is still tracked, and so the
+        // direction matches the now-raised muzzle position.
         Vector3 targetPoint = target.position + Vector3.up * 1.1f;
 
         if (weapon != null)
