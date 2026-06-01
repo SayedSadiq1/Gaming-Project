@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Reflection;
 using TMPro;
+using Unity.FPS.Game;
 using Unity.FPS.Gameplay;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -13,12 +14,13 @@ public class Level2ObjectiveManager : MonoBehaviour
         FirstPath,
         Keycard,
         MainDepot,
+        SecureVehicle,
         Exit
     }
 
     [Header("HUD")]
     public CombatHUD combatHUD;
-    public int totalObjectives = 3;
+    public int totalObjectives = 4;
 
     [Header("Objective Text")]
     public string firstPathTitle = "CLEAR OUTER DEPOT PATH";
@@ -30,6 +32,9 @@ public class Level2ObjectiveManager : MonoBehaviour
     public string mainDepotTitle = "CLEAR MAIN VEHICLE DEPOT";
     [TextArea(2, 4)]
     public string mainDepotDescription = "Move into the heavily guarded vehicle yard and clear the path forward.";
+    public string secureVehicleTitle = "SECURE DEPOT VEHICLE";
+    [TextArea(2, 4)]
+    public string secureVehicleDescription = "Reach the marked military truck and press E to secure it before entering Level 3.";
     public string exitTitle = "REACH LEVEL 3 ENTRANCE";
     [TextArea(2, 4)]
     public string exitDescription = "Stand on the green entrance pad and press E once the depot route is secure.";
@@ -37,6 +42,7 @@ public class Level2ObjectiveManager : MonoBehaviour
     [Header("Interaction")]
     public Key interactKey = Key.E;
     public float keycardInteractDistance = 3f;
+    public float secureVehicleInteractDistance = 5f;
     public float exitInteractDistance = 5f;
 
     [Header("Keycard")]
@@ -52,6 +58,14 @@ public class Level2ObjectiveManager : MonoBehaviour
     public Vector3 exitTriggerPosition = new Vector3(25.8f, 1f, -123.7f);
     public Vector3 exitTriggerSize = new Vector3(14f, 3f, 9f);
 
+    [Header("Enemy Clear Checks")]
+    public Vector3 firstPathEnemyAreaPosition = new Vector3(25f, 1.5f, 27f);
+    public Vector3 firstPathEnemyAreaSize = new Vector3(70f, 6f, 50f);
+    public float enemyClearCheckInterval = 0.35f;
+
+    [Header("Secure Vehicle Objective")]
+    public string secureVehicleObjectName = "military_truck_12_ton(1) (1)";
+
     [Header("Mission Complete")]
     public string nextSceneName = "Level-3";
     public string completeTitle = "LEVEL 2 COMPLETE";
@@ -60,9 +74,13 @@ public class Level2ObjectiveManager : MonoBehaviour
     bool _firstPathDone;
     bool _keycardDone;
     bool _mainDepotDone;
+    bool _vehicleSecured;
     bool _missionShown;
     bool _showKeycardPrompt;
+    bool _showVehiclePrompt;
     bool _showExitPrompt;
+    bool _firstPathAreaEntered;
+    float _nextEnemyClearCheckTime;
 
     CanvasGroup _objectivePanelGroup;
     CanvasGroup _objectiveCounterGroup;
@@ -75,6 +93,7 @@ public class Level2ObjectiveManager : MonoBehaviour
     Image _objectiveTopLine;
     Coroutine _objectiveSequence;
     GameObject _keycardObject;
+    Transform _secureVehicleTransform;
     PlayerWeaponsManager _playerWeapons;
     Transform _playerTransform;
     static GUIStyle s_PromptStyle;
@@ -89,18 +108,23 @@ public class Level2ObjectiveManager : MonoBehaviour
             combatHUD = FindAnyObjectByType<CombatHUD>(FindObjectsInactive.Include);
 
         BuildObjectiveTextUI();
-        ShowObjective(firstPathTitle, firstPathDescription);
+        totalObjectives = Mathf.Max(totalObjectives, 4);
+        ShowObjective(firstPathTitle, FirstPathActiveDescription());
         RefreshHUD();
+        _firstPathAreaEntered = true;
         CreateTrigger("L2_Objective_ClearOuterPath_Trigger", firstPathTriggerPosition, firstPathTriggerSize, ObjectiveStep.FirstPath);
         CreateTrigger("L2_Objective_ClearMainDepot_Trigger", mainDepotTriggerPosition, mainDepotTriggerSize, ObjectiveStep.MainDepot);
-        CreateTrigger("L2_MissionComplete_Trigger", exitTriggerPosition, exitTriggerSize, ObjectiveStep.Exit);
         EnsureKeycardPickup();
+        FindSecureVehicle();
     }
 
     void Update()
     {
         CachePlayer();
+        UpdateFirstPathClearObjective();
+        DetectExternalKeycardCollection();
         HandleKeycardInteraction();
+        HandleSecureVehicleInteraction();
         HandleExitInteraction();
     }
 
@@ -109,7 +133,8 @@ public class Level2ObjectiveManager : MonoBehaviour
         switch (step)
         {
             case ObjectiveStep.FirstPath:
-                MarkObjective(ref _firstPathDone, "Outer depot path cleared.");
+                _firstPathAreaEntered = true;
+                TryCompleteFirstPathClear();
                 break;
             case ObjectiveStep.Keycard:
                 MarkObjective(ref _keycardDone, "Depot keycard collected.");
@@ -117,10 +142,90 @@ public class Level2ObjectiveManager : MonoBehaviour
             case ObjectiveStep.MainDepot:
                 MarkObjective(ref _mainDepotDone, "Main depot path cleared.");
                 break;
+            case ObjectiveStep.SecureVehicle:
+                MarkObjective(ref _vehicleSecured, "Depot vehicle secured.");
+                break;
             case ObjectiveStep.Exit:
-                TryShowMissionComplete();
+                ShowTemporaryNotification("PRESS E AT THE LEVEL 3 ENTRANCE");
                 break;
         }
+    }
+
+    void UpdateFirstPathClearObjective()
+    {
+        if (_firstPathDone || !_firstPathAreaEntered) return;
+        if (Time.time < _nextEnemyClearCheckTime) return;
+
+        _nextEnemyClearCheckTime = Time.time + enemyClearCheckInterval;
+        TryCompleteFirstPathClear();
+    }
+
+    void TryCompleteFirstPathClear()
+    {
+        int aliveEnemies = CountAliveEnemiesInArea(firstPathEnemyAreaPosition, firstPathEnemyAreaSize);
+        if (aliveEnemies > 0)
+        {
+            ShowObjective(firstPathTitle, FirstPathActiveDescription(aliveEnemies));
+            return;
+        }
+
+        MarkObjective(ref _firstPathDone, "Outer depot enemies cleared.");
+    }
+
+    int CountAliveEnemiesInArea(Vector3 center, Vector3 size)
+    {
+        int count = 0;
+        var healthComponents = FindObjectsByType<Health>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        foreach (var health in healthComponents)
+        {
+            if (!IsLiveEnemyInArea(health, center, size)) continue;
+            count++;
+        }
+
+        return count;
+    }
+
+    bool IsLiveEnemyInArea(Health health, Vector3 center, Vector3 size)
+    {
+        if (health == null || health.CurrentHealth <= 0f) return false;
+
+        Transform healthTransform = health.transform;
+        if (healthTransform == null) return false;
+        if (healthTransform.GetComponentInParent<PlayerWeaponsManager>() != null) return false;
+
+        if (!LooksLikeEnemy(healthTransform)) return false;
+
+        Vector3 position = healthTransform.position;
+        Vector3 delta = position - center;
+        return Mathf.Abs(delta.x) <= size.x * 0.5f &&
+               Mathf.Abs(delta.y) <= size.y * 0.5f &&
+               Mathf.Abs(delta.z) <= size.z * 0.5f;
+    }
+
+    bool LooksLikeEnemy(Transform candidate)
+    {
+        if (candidate == null) return false;
+
+        if (candidate.GetComponentInParent<EnemyGunAI>() != null) return true;
+        if (candidate.GetComponentInParent<EnemyMovement>() != null) return true;
+        if (candidate.GetComponentInParent<EnemyDeath>() != null) return true;
+        if (candidate.GetComponentInChildren<EnemyGunAI>(true) != null) return true;
+        if (candidate.GetComponentInChildren<EnemyMovement>(true) != null) return true;
+        if (candidate.GetComponentInChildren<EnemyDeath>(true) != null) return true;
+
+        string objectName = candidate.name.ToLowerInvariant();
+        return objectName.Contains("enemy") ||
+               objectName.Contains("soldier") ||
+               objectName.Contains("guard") ||
+               objectName.Contains("insurgent");
+    }
+
+    string FirstPathActiveDescription(int aliveEnemies = -1)
+    {
+        if (aliveEnemies >= 0)
+            return $"Eliminate all enemies in the first depot area. Enemies remaining: {aliveEnemies}";
+
+        return "Eliminate all enemies in the first depot area before moving deeper into the vehicle depot.";
     }
 
     void MarkObjective(ref bool flag, string logMessage)
@@ -147,6 +252,7 @@ public class Level2ObjectiveManager : MonoBehaviour
         if (_firstPathDone) count++;
         if (_keycardDone) count++;
         if (_mainDepotDone) count++;
+        if (_vehicleSecured) count++;
         return count;
     }
 
@@ -154,7 +260,7 @@ public class Level2ObjectiveManager : MonoBehaviour
     {
         if (_missionShown) return;
 
-        if (!_firstPathDone || !_keycardDone || !_mainDepotDone)
+        if (!_firstPathDone || !_keycardDone || !_mainDepotDone || !_vehicleSecured)
         {
             ShowTemporaryNotification("FINISH CURRENT OBJECTIVE FIRST");
             ShowCurrentObjective();
@@ -172,7 +278,7 @@ public class Level2ObjectiveManager : MonoBehaviour
             kills = scoreManager.Kills;
 
         string stats =
-            "<color=#00C8FF>OBJECTIVES</color>\n3 / 3 COMPLETE\n\n" +
+            $"<color=#00C8FF>OBJECTIVES</color>\n{CompletedObjectiveCount()} / {totalObjectives} COMPLETE\n\n" +
             $"<color=#00C8FF>KILLS</color>\n{kills}\n\n" +
             "<color=#00C8FF>STATUS</color>\n" + completeStatus;
 
@@ -202,8 +308,31 @@ public class Level2ObjectiveManager : MonoBehaviour
                 renderer.material = CreateKeycardMaterial();
         }
 
-        foreach (var trigger in _keycardObject.GetComponentsInChildren<KeycardPickupTrigger>(true))
-            trigger.enabled = false;
+        DisableExternalKeycardPickupScripts();
+    }
+
+    void DisableExternalKeycardPickupScripts()
+    {
+        if (_keycardObject == null) return;
+
+        DisableKeycardPickupBehaviours(_keycardObject.GetComponentsInChildren<MonoBehaviour>(true));
+        DisableKeycardPickupBehaviours(_keycardObject.GetComponentsInParent<MonoBehaviour>(true));
+    }
+
+    void DisableKeycardPickupBehaviours(MonoBehaviour[] behaviours)
+    {
+        foreach (var behaviour in behaviours)
+        {
+            if (behaviour == null || behaviour == this) continue;
+
+            string typeName = behaviour.GetType().Name;
+            if (typeName == nameof(KeycardPickupTrigger) ||
+                typeName == "KeycardPickup" ||
+                typeName == "KeycardSpawner")
+            {
+                behaviour.enabled = false;
+            }
+        }
     }
 
     GameObject FindKeycardVisualCandidate()
@@ -257,6 +386,82 @@ public class Level2ObjectiveManager : MonoBehaviour
 
         if (_showKeycardPrompt && WasInteractPressed())
             CollectLevel2Keycard();
+    }
+
+    void FindSecureVehicle()
+    {
+        _secureVehicleTransform = null;
+
+        var transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var candidate in transforms)
+        {
+            if (candidate == null || candidate.gameObject.scene != gameObject.scene) continue;
+            if (candidate.name == secureVehicleObjectName)
+            {
+                _secureVehicleTransform = candidate;
+                return;
+            }
+        }
+
+        string fallbackName = secureVehicleObjectName.Replace("(1) (1)", "").Trim().ToLowerInvariant();
+        foreach (var candidate in transforms)
+        {
+            if (candidate == null || candidate.gameObject.scene != gameObject.scene) continue;
+            if (candidate.name.ToLowerInvariant().Contains(fallbackName))
+            {
+                _secureVehicleTransform = candidate;
+                Debug.LogWarning("[Level2] Exact secure vehicle was not found. Using fallback: " + candidate.name);
+                return;
+            }
+        }
+
+        Debug.LogWarning("[Level2] Secure vehicle objective target was not found: " + secureVehicleObjectName);
+    }
+
+    void HandleSecureVehicleInteraction()
+    {
+        _showVehiclePrompt = false;
+
+        if (_vehicleSecured) return;
+        if (!_firstPathDone || !_keycardDone || !_mainDepotDone) return;
+        if (_playerTransform == null) return;
+
+        if (_secureVehicleTransform == null)
+            FindSecureVehicle();
+        if (_secureVehicleTransform == null) return;
+
+        _showVehiclePrompt = Vector3.Distance(_playerTransform.position, _secureVehicleTransform.position) <= secureVehicleInteractDistance;
+        if (_showVehiclePrompt && WasInteractPressed())
+            CompleteObjective(ObjectiveStep.SecureVehicle);
+    }
+
+    void DetectExternalKeycardCollection()
+    {
+        if (_keycardDone || _playerTransform == null) return;
+
+        bool keycardObjectGone = _keycardObject == null || !_keycardObject.activeInHierarchy;
+
+        var holder = _playerTransform.GetComponent<ChainDoorKeycardHolder>()
+                  ?? _playerTransform.GetComponentInParent<ChainDoorKeycardHolder>();
+        bool holderHasKeycard = holder != null &&
+            (holder.HasKeycard(keycardID) || holder.HasKeycard(gateKeycardID));
+
+        var inventory = _playerTransform.GetComponent<KeycardInventory>()
+                     ?? _playerTransform.GetComponentInParent<KeycardInventory>();
+        bool inventoryHasBlueKeycard = inventory != null && inventory.HasKeycard(KeycardColor.Blue);
+
+        if (!keycardObjectGone && !holderHasKeycard && !inventoryHasBlueKeycard) return;
+
+        if (holder == null)
+            holder = _playerTransform.gameObject.AddComponent<ChainDoorKeycardHolder>();
+
+        GrantLevel2Keycards(holder);
+
+        if (inventory == null)
+            inventory = _playerTransform.gameObject.AddComponent<KeycardInventory>();
+        inventory.AddKeycard(KeycardColor.Blue);
+
+        CompleteObjective(ObjectiveStep.Keycard);
     }
 
     void CollectLevel2Keycard()
@@ -321,7 +526,7 @@ public class Level2ObjectiveManager : MonoBehaviour
         _showExitPrompt = false;
 
         if (_missionShown) return;
-        if (!_firstPathDone || !_keycardDone || !_mainDepotDone) return;
+        if (!_firstPathDone || !_keycardDone || !_mainDepotDone || !_vehicleSecured) return;
         if (_playerTransform == null) return;
 
         _showExitPrompt = IsPlayerInExitArea();
@@ -409,7 +614,7 @@ public class Level2ObjectiveManager : MonoBehaviour
     {
         if (!_firstPathDone)
         {
-            ShowObjective(firstPathTitle, firstPathDescription);
+            ShowObjective(firstPathTitle, FirstPathActiveDescription());
             return;
         }
 
@@ -422,6 +627,12 @@ public class Level2ObjectiveManager : MonoBehaviour
         if (!_mainDepotDone)
         {
             ShowObjective(mainDepotTitle, mainDepotDescription);
+            return;
+        }
+
+        if (!_vehicleSecured)
+        {
+            ShowObjective(secureVehicleTitle, secureVehicleDescription);
             return;
         }
 
@@ -656,6 +867,8 @@ public class Level2ObjectiveManager : MonoBehaviour
     {
         if (_showKeycardPrompt)
             DrawCenteredPrompt("PRESS E TO PICK UP KEYCARD", 0.62f);
+        else if (_showVehiclePrompt)
+            DrawCenteredPrompt("PRESS E TO SECURE VEHICLE", 0.62f);
         else if (_showExitPrompt)
             DrawCenteredPrompt("PRESS E TO ENTER LEVEL 3", 0.62f);
     }
